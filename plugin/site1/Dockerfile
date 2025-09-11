@@ -17,7 +17,9 @@ RUN if [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then \
 # Copy all source files
 COPY . .
 
-# Build the React application
+# Build the React application with optimizations
+ENV GENERATE_SOURCEMAP=false
+ENV REACT_APP_BUILD_OPTIMIZATION=true
 RUN npm run build
 
 # Production stage: Use nginx to serve the built files

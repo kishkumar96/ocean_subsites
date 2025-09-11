@@ -1,0 +1,56 @@
+.cook-select-dropdown {
+  appearance: menulist !important;
+  -webkit-appearance: menulist !important;
+  -moz-appearance: menulist !important;
+  background-image: none !important;
+  cursor: pointer !important;
+  user-select: none !important;
+  pointer-events: auto !important;
+  z-index: 1001 !important;
+  position: relative !important;
+}
+
+.cook-select-dropdown:focus {
+  outline: 2px solid #0d6efd;
+  outline-offset: 2px;
+}
+
+.cook-select-dropdown option {
+  background-color: white;
+  color: black;
+  padding: 4px 8px;
+}
+
+/* Ensure dropdown container doesn't interfere */
+.cook-dropdown-container {
+  position: relative;
+  z-index: 1001;
+  pointer-events: auto;
+}
+
+/* Prevent parent drag when interacting with dropdowns */
+.cook-dropdown-container * {
+  pointer-events: auto;
+}
+
+@keyframes cookLayerFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.cook-layer-menu {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+.cook-layer-menu.open {
+  opacity: 1;
+  pointer-events: auto;
+}

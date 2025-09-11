@@ -1,0 +1,52 @@
+.cook-bottom-offcanvas {
+  z-index: 1050;
+}
+
+.cook-bottom-offcanvas .offcanvas-header {
+  padding: 1rem;
+  background-color: var(--bs-primary);
+  color: white;
+}
+
+.cook-bottom-offcanvas .btn-close {
+  filter: invert(1);
+}
+
+.cook-bottom-offcanvas .nav-tabs {
+  border-bottom: 2px solid #dee2e6;
+}
+
+.cook-bottom-offcanvas .nav-tabs .nav-link {
+  color: #495057;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 0.75rem 1rem;
+}
+
+.cook-bottom-offcanvas .nav-tabs .nav-link:hover {
+  border-bottom-color: #007bff;
+  color: #007bff;
+}
+
+.cook-bottom-offcanvas .nav-tabs .nav-link.active {
+  color: #007bff;
+  background-color: transparent;
+  border-bottom-color: #007bff;
+  font-weight: 600;
+}
+
+.cook-bottom-offcanvas .table {
+  margin-bottom: 0;
+}
+
+.cook-bottom-offcanvas .table th {
+  background-color: #f8f9fa;
+  border-top: none;
+  font-weight: 600;
+}
+
+.cook-bottom-offcanvas .spinner-border {
+  width: 2rem;
+  height: 2rem;
+  color: #007bff;
+}

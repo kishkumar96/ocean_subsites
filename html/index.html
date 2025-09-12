@@ -1,17 +1,51 @@
 <html>
     <head>
         <title>Main App</title>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        
+        <!-- Performance optimizations -->
+        <link rel="preconnect" href="//fonts.googleapis.com">
+        <link rel="preconnect" href="//cdn.jsdelivr.net">
+        <link rel="dns-prefetch" href="//fonts.gstatic.com">
+        
+        <!-- Preload critical resources -->
+        <link rel="prefetch" href="/site1/">
+        <link rel="prefetch" href="/widget1/">
+        <link rel="prefetch" href="/widget3/">
+        
+        <style>
+            body { 
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; 
+                margin: 2rem; 
+                line-height: 1.6;
+            }
+            h1 { color: #2c3e50; margin-bottom: 1rem; }
+            ol { list-style-type: decimal; }
+            li { margin: 0.5rem 0; }
+            a { 
+                color: #3498db; 
+                text-decoration: none;
+                padding: 0.25rem 0.5rem;
+                border-radius: 3px;
+                transition: background-color 0.2s ease;
+            }
+            a:hover { 
+                background-color: #ecf0f1; 
+                text-decoration: underline;
+            }
+        </style>
     </head>
     <body>
-        <h1>Main App</h1>
-        <p>This is the main app.</p>
+        <h1>Ocean Subsites Dashboard</h1>
+        <p>High-performance microservices architecture for ocean monitoring applications.</p>
         <ol>
-            <li><a target="_blank" href="/site1/">Template</a></li>
+            <li><a target="_blank" href="/site1/">Template Application</a></li>
             <li><a target="_blank" href="/site2/">Image Directory</a></li>
-            <li><a target="_blank" href="/widget1/?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzU1NTQ4ODU2LCJpYXQiOjE3NTU0NjI0NTYsImp0aSI6IjE2MDA4Mjc4OWVkZjQwZTBiN2U3M2I2YjBmOTY2NzQ3IiwidXNlcl9pZCI6N30.l4pcrGqLKEdMvEhcQSE_3ER_7WssYA5pi1tEDiR7C3E&country=NIU">Widget 1</a></li>
-            <li><a target="_blank" href="/widget2/">Experts</a></li>
+            <li><a target="_blank" href="/widget1/?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzU1NTQ4ODU2LCJpYXQiOjE3NTU0NjI0NTYsImp0aSI6IjE2MDA4Mjc4OWVkZjQwZTBiN2U3M2I2YjBmOTY2NzQ3IiwidXNlcl9pZCI6N30.l4pcrGqLKEdMvEhcQSE_3ER_7WssYA5pi1tEDiR7C3E&country=NIU">Data Visualization Widget</a></li>
+            <li><a target="_blank" href="/widget2/">Expert Analysis</a></li>
             <li><a target="_blank" href="/widget3/">Real Time Monitoring</a></li>
-            <li><a target="_blank" href="/widget4/">Widget 4</a></li>
+            <li><a target="_blank" href="/widget4/">Advanced Analytics</a></li>
         </ol>
     </body>
 </html>

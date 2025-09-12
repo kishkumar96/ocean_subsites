@@ -1,7 +1,6 @@
 import React from "react";
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
-import Form from "react-bootstrap/Form";
 import { FaPlay, FaPause, FaForward, FaBackward } from "react-icons/fa";
 import Badge from 'react-bootstrap/Badge';
 import './timeseries_scroll.css';
@@ -32,7 +31,8 @@ const smallSelect = {
   minHeight: 26,
   minWidth: 0,
   width: "100%",
-  padding: "2px 8px"
+  padding: "2px 8px",
+  cursor: "pointer"
 };
 
 const smallRange = {
@@ -98,18 +98,17 @@ export default function WaveForecastAccordion({
       {/* Layer select */}
       <div style={sliderRowStyle}>
         <label style={sideLabelStyle} htmlFor="select-wave-forecast">Layer</label>
-        <Form.Select
+        <select
           id="select-wave-forecast"
-          size="sm"
+          className="form-select form-select-sm"
           value={selectedWaveForecast}
           onChange={e => setSelectedWaveForecast(e.target.value)}
           style={smallSelect}
-          onClick={e => e.currentTarget.blur()}
         >
           {WAVE_FORECAST_LAYERS.map(layer => (
             <option key={layer.value} value={layer.value}>{layer.label}</option>
           ))}
-        </Form.Select>
+        </select>
       </div>
 
       {/* Opacity slider */}

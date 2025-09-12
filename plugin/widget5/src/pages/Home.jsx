@@ -68,6 +68,32 @@ const WAVE_FORECAST_LAYERS = [
     ]
   },
   {
+    label: "Wind Wave Height + Dir",
+    value: "composite_hs_p1_dirp_p1",
+    id: 101,
+    composite: true,
+    legendUrl: COMMON_LEGEND_URL,
+    layers: [
+      {
+        value: "hs_p1",
+        style: "default-scalar/x-Sst",
+        colorscalerange: "0,4",
+        wmsUrl: "https://gemthreddshpc.spc.int/thredds/wms/POP/model/country/spc/forecast/hourly/COK/Rarotonga_UGRID.nc",
+        id: 8,
+        numcolorbands: 250,
+        legendUrl: COMMON_LEGEND_URL,
+      },
+      {
+        value: "dirp_p1",
+        style: "black-arrow",
+        colorscalerange: "",
+        wmsUrl: "https://gemthreddshpc.spc.int/thredds/wms/POP/model/country/spc/forecast/hourly/COK/Rarotonga_UGRID.nc",
+        id: 9,
+        legendUrl: COMMON_LEGEND_URL,
+      }
+    ]
+  },
+  {
     label: "Significant Wave Height (Hm0)",
     value: "hs",
     style: "default-scalar/x-Sst",
@@ -83,6 +109,15 @@ const WAVE_FORECAST_LAYERS = [
     style: "black-arrow",
     colorscalerange: "",
     id: 3,
+    wmsUrl: "https://gemthreddshpc.spc.int/thredds/wms/POP/model/country/spc/forecast/hourly/COK/Rarotonga_UGRID.nc",
+    legendUrl: COMMON_LEGEND_URL,
+  },
+  {
+    label: "Peak Wave Direction (arrow)",
+    value: "dirp",
+    style: "black-arrow",
+    colorscalerange: "",
+    id: 7,
     wmsUrl: "https://gemthreddshpc.spc.int/thredds/wms/POP/model/country/spc/forecast/hourly/COK/Rarotonga_UGRID.nc",
     legendUrl: COMMON_LEGEND_URL,
   },
@@ -105,6 +140,56 @@ const WAVE_FORECAST_LAYERS = [
     wmsUrl: "https://gemthreddshpc.spc.int/thredds/wms/POP/model/country/spc/forecast/hourly/COK/Rarotonga_UGRID.nc",
     numcolorbands: 250,
     legendUrl: 'https://ocean-plotter.spc.int/plotter/GetLegendGraphic?layer_map=43&mode=standard&min_color=0&max_color=20&step=1&color=jet&unit=s',
+  },
+  {
+    label: "Frequency Spread (deg)",
+    value: "fspr",
+    style: "default-scalar/x-Sst",
+    colorscalerange: "0,50",
+    id: 6,
+    wmsUrl: "https://gemthreddshpc.spc.int/thredds/wms/POP/model/country/spc/forecast/hourly/COK/Rarotonga_UGRID.nc",
+    numcolorbands: 250,
+    legendUrl: 'https://ocean-plotter.spc.int/plotter/GetLegendGraphic?mode=standard&min_color=0&max_color=50&step=1&color=jet&unit=deg',
+  },
+  {
+    label: "Wind Wave Height (Hs)",
+    value: "hs_p1",
+    style: "default-scalar/x-Sst",
+    colorscalerange: "0,4",
+    id: 8,
+    wmsUrl: "https://gemthreddshpc.spc.int/thredds/wms/POP/model/country/spc/forecast/hourly/COK/Rarotonga_UGRID.nc",
+    numcolorbands: 250,
+    legendUrl: COMMON_LEGEND_URL,
+  },
+  {
+    label: "Wind Wave Period (Tp)",
+    value: "tp_p1",
+    style: "default-scalar/x-Sst",
+    colorscalerange: "0,25",
+    id: 9,
+    wmsUrl: "https://gemthreddshpc.spc.int/thredds/wms/POP/model/country/spc/forecast/hourly/COK/Rarotonga_UGRID.nc",
+    numcolorbands: 250,
+    legendUrl: 'https://ocean-plotter.spc.int/plotter/GetLegendGraphic?layer_map=43&mode=standard&min_color=0&max_color=25&step=1&color=jet&unit=s',
+  },
+  {
+    label: "Wind Speed (10m)",
+    value: "u10:v10-mag",
+    style: "default-scalar/x-Sst",
+    colorscalerange: "0,25",
+    id: 10,
+    wmsUrl: "https://gemthreddshpc.spc.int/thredds/wms/POP/model/country/spc/forecast/hourly/COK/Rarotonga_UGRID.nc",
+    numcolorbands: 250,
+    legendUrl: 'https://ocean-plotter.spc.int/plotter/GetLegendGraphic?mode=standard&min_color=0&max_color=25&step=1&color=jet&unit=m/s',
+  },
+  {
+    label: "Water Depth",
+    value: "depth",
+    style: "default-scalar/x-Sst",
+    colorscalerange: "0,5000",
+    id: 11,
+    wmsUrl: "https://gemthreddshpc.spc.int/thredds/wms/POP/model/country/spc/forecast/hourly/COK/Rarotonga_UGRID.nc",
+    numcolorbands: 250,
+    legendUrl: 'https://ocean-plotter.spc.int/plotter/GetLegendGraphic?mode=standard&min_color=0&max_color=5000&step=100&color=jet&unit=m',
   }
 ];
 
@@ -209,9 +294,8 @@ function CookIslandsForecast() {
 
   const [activeLayers, setActiveLayers] = useState({
     osm: true,
-    "stamen-toner": true,
-    "stamen-terrain": false,
     waveForecast: true,
+    inundation: false,
   });
   const [selectedWaveForecast, setSelectedWaveForecast] = useState(WAVE_FORECAST_LAYERS[0].value);
 
@@ -246,8 +330,12 @@ function CookIslandsForecast() {
 
   // Drag handlers for sidebar
   const handleMouseDown = (e) => {
-    if (e.target.closest('.accordion-button') || e.target.closest('.form-check')) {
-      return; // Don't start drag if clicking on accordion buttons or checkboxes
+    if (e.target.closest('.accordion-button') || 
+        e.target.closest('.form-check') || 
+        e.target.closest('select') || 
+        e.target.closest('button') ||
+        e.target.closest('input')) {
+      return; // Don't start drag if clicking on interactive elements
     }
     
     setIsDragging(true);
@@ -431,6 +519,20 @@ function CookIslandsForecast() {
       mapInstance.current.removeLayer(layerRefs.current["stamen-terrain"]);
       layerRefs.current["stamen-terrain"] = null;
     }
+    if (activeLayers.inundation && !layerRefs.current.inundation) {
+      const inundationLayer = L.tileLayer.wms("https://opmgeoserver.gem.spc.int/geoserver/wms", {
+        layers: "Rarotonga_inundation_depth",
+        format: "image/png",
+        transparent: true,
+        opacity: 0.7,
+        attribution: 'Inundation Data © SPC GeoServer',
+      });
+      inundationLayer.addTo(mapInstance.current);
+      layerRefs.current.inundation = inundationLayer;
+    } else if (!activeLayers.inundation && layerRefs.current.inundation) {
+      mapInstance.current.removeLayer(layerRefs.current.inundation);
+      layerRefs.current.inundation = null;
+    }
   }, [activeLayers]);
 
   useEffect(() => {
@@ -444,6 +546,13 @@ function CookIslandsForecast() {
     if (!activeLayers.waveForecast) return;
 
     const selected = WAVE_FORECAST_LAYERS.find(l => l.value === selectedWaveForecast);
+    console.log("🌊 Loading wave layer:", {
+      selectedValue: selectedWaveForecast,
+      selectedLayer: selected,
+      isComposite: selected?.composite,
+      layers: selected?.composite ? selected.layers.map(l => l.value) : [selected?.value],
+      timestamp: currentSliderDateStr
+    });
 
     if (selected.composite && Array.isArray(selected.layers)) {
       wmsLayerRefs.current = selected.layers.map((sub) => {
@@ -485,6 +594,12 @@ function CookIslandsForecast() {
         }
       });
     } else if (selected.value === "dirm") {
+      console.log("🧭 Loading direction layer (dirm):", {
+        wmsUrl: selected.wmsUrl,
+        layers: selected.value,
+        style: selected.style,
+        time: currentSliderDateStr
+      });
       const wmsLayer = L.tileLayer.wms(
         selected.wmsUrl,
         {
@@ -499,6 +614,17 @@ function CookIslandsForecast() {
       wmsLayer.addTo(wmsLayerGroup.current);
       wmsLayerRefs.current = [wmsLayer];
     } else {
+      const testUrl = `${selected.wmsUrl}?SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0&LAYERS=${selected.value}&STYLES=${selected.style}&CRS=EPSG:4326&BBOX=-160.25,-21.75,-159.25,-20.75&WIDTH=256&HEIGHT=256&FORMAT=image/png&TIME=${currentSliderDateStr}&COLORSCALERANGE=${selected.colorscalerange}`;
+      
+      console.log("📊 Loading standard WMS layer:", {
+        id: selected.id,
+        wmsUrl: selected.wmsUrl,
+        layers: selected.value,
+        style: selected.style,
+        colorscalerange: selected.colorscalerange,
+        time: currentSliderDateStr,
+        testUrl: testUrl
+      });
       const wmsLayer = addWMSTileLayer(
         mapInstance.current,
         selected.wmsUrl,
@@ -681,6 +807,34 @@ function CookIslandsForecast() {
                   </Accordion.Body>
                 </Accordion.Item>
                 {/* Inundation */}
+                <Accordion.Item eventKey="inundation">
+                  <Accordion.Header>
+                    <LayerAccordionHeader
+                      checked={!!activeLayers["inundation"]}
+                      onChange={() => setActiveLayers(layers => ({ ...layers, "inundation": !layers.inundation }))}
+                      eventKey="inundation"
+                    >
+                      Inundation Depth
+                    </LayerAccordionHeader>
+                  </Accordion.Header>
+                  <Accordion.Body>
+                    <div style={{ fontSize: "0.95em", color: "var(--color-text)" }}>
+                      <div style={{ marginBottom: "8px" }}>
+                        Shows predicted inundation depths for Rarotonga, Cook Islands.
+                      </div>
+                      <div style={{ fontSize: "10px", color: "var(--color-text)", wordBreak: "break-all" }}>
+                        Source: <a 
+                          href="https://opmgeoserver.gem.spc.int/geoserver" 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          style={{ color: "var(--color-primary)" }}
+                        >
+                          https://opmgeoserver.gem.spc.int/geoserver
+                        </a>
+                      </div>
+                    </div>
+                  </Accordion.Body>
+                </Accordion.Item>
               
               </Accordion>
             </Accordion.Body>

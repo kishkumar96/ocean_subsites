@@ -15,6 +15,8 @@ services:
       - plugin-widget2
       - plugin-widget3
       - plugin-widget4
+      - plugin-widget5
+      - plugin-widget-cook
 
   plugin-site1:
     build: ./plugin/site1
@@ -48,3 +50,15 @@ services:
     expose:
       - "80"
     container_name: plugin-widget4
+    
+  plugin-widget5:
+    build: ./plugin/widget5
+    expose:
+      - "80"
+    container_name: plugin-widget5
+    
+  plugin-widget-cook:
+    build: ./plugin/widget-cook
+    expose:
+      - "80"
+    container_name: plugin-widget-cook

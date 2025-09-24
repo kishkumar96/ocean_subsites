@@ -42,6 +42,16 @@ const getFloatingSidebarStyle = (position, dragging) => ({
 
 const WAVE_FORECAST_LAYERS = [
   {
+    label: "Inundation Depth",
+    value: "Band1",
+    style: "scalar-converge-final/Blues",
+    colorscalerange: "0,3",
+    id: 200,
+    wmsUrl: "https://gemthreddshpc.spc.int/thredds/wms/POP/model/country/spc/forecast/hourly/COK/Rarotonga_inundation_depth.nc",
+    numcolorbands: 250,
+    legendUrl: "https://ocean-plotter.spc.int/plotter/GetLegendGraphic?mode=standard&min_color=0&max_color=3&step=0.5&color=Blues&unit=m",
+  },
+  {
     label: "Significant Wave Height + Dir",
     value: "composite_hs_dirm",
     id: 100,
@@ -297,7 +307,11 @@ function CookIslandsForecast() {
     waveForecast: true,
     inundation: false,
   });
-  const [selectedWaveForecast, setSelectedWaveForecast] = useState(WAVE_FORECAST_LAYERS[0].value);
+  const [selectedWaveForecast, setSelectedWaveForecast] = useState(
+    WAVE_FORECAST_LAYERS && WAVE_FORECAST_LAYERS.length > 0 
+      ? WAVE_FORECAST_LAYERS[0].value 
+      : "composite_hs_dirm"
+  );
 
   const [capTime, setCapTime] = useState({
     loading: true,
@@ -413,9 +427,11 @@ function CookIslandsForecast() {
     fetchCapabilities();
   }, [selectedWaveForecast]);
 
-  // Derived time controls
-  const totalSteps = Math.floor((capTime.end - capTime.start) / (capTime.stepHours * 60 * 60 * 1000));
-  const currentSliderDate = new Date(capTime.start.getTime() + sliderIndex * capTime.stepHours * 60 * 60 * 1000);
+  // Derived time controls with safety checks
+  const totalSteps = capTime.loading ? 0 : Math.max(0, Math.floor((capTime.end - capTime.start) / (capTime.stepHours * 60 * 60 * 1000)));
+  const currentSliderDate = capTime.loading 
+    ? new Date() 
+    : new Date(capTime.start.getTime() + sliderIndex * capTime.stepHours * 60 * 60 * 1000);
   const currentSliderDateStr = formatDateISOString(currentSliderDate);
 
   // Initialize map and click handling

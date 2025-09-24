@@ -17,6 +17,7 @@ services:
       - plugin-widget4
       - plugin-widget5
       - plugin-widget-cook
+      - cog-tiler
 
   plugin-site1:
     build: ./plugin/site1
@@ -50,7 +51,6 @@ services:
     expose:
       - "80"
     container_name: plugin-widget4
-    
   plugin-widget5:
     build: ./plugin/widget5
     expose:
@@ -62,3 +62,26 @@ services:
     expose:
       - "80"
     container_name: plugin-widget-cook
+
+  cog-tiler:
+    build:
+      context: ../cog_tiler/cog_tiler
+      dockerfile: Dockerfile
+    image: cog-tile-server:latest
+    container_name: cog-tiler
+    expose:
+      - "8000"
+    volumes:
+      - /mnt/data/ocean_portal/datasets:/app/datasets
+    environment:
+      GDAL_CACHEMAX: "1024"
+      GDAL_NUM_THREADS: "ALL_CPUS"
+      GDAL_TIFF_OVR_BLOCKSIZE: "128"
+      PYTHONUNBUFFERED: "1"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/cog/docs"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s

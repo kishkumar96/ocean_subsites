@@ -81,6 +81,12 @@ export default function WaveForecastAccordion({
   setIsPlaying,
   currentSliderDate,
 }) {
+  console.log("WaveForecastAccordion props:", {
+    selectedWaveForecast,
+    totalSteps,
+    sliderIndex,
+    WAVE_FORECAST_LAYERS: WAVE_FORECAST_LAYERS?.length
+  });
   // Get the legend URL from the selected layer (or sublayer if composite)
   const selectedLayer = WAVE_FORECAST_LAYERS.find(l => l.value === selectedWaveForecast);
   let legendUrl = "";
@@ -102,7 +108,10 @@ export default function WaveForecastAccordion({
           id="select-wave-forecast"
           className="form-select form-select-sm"
           value={selectedWaveForecast}
-          onChange={e => setSelectedWaveForecast(e.target.value)}
+          onChange={e => {
+            console.log("Wave forecast selector changed:", e.target.value);
+            setSelectedWaveForecast(e.target.value);
+          }}
           style={smallSelect}
         >
           {WAVE_FORECAST_LAYERS.map(layer => (
@@ -140,7 +149,10 @@ export default function WaveForecastAccordion({
           value={sliderIndex}
           disabled={capTime.loading}
           step={1}
-          onChange={e => setSliderIndex(Number(e.target.value))}
+          onChange={e => {
+            console.log("Time slider changed:", e.target.value);
+            setSliderIndex(Number(e.target.value));
+          }}
           style={smallRange}
         />
         <ButtonGroup size="sm" style={smallButtonGroup}>

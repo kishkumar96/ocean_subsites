@@ -1,0 +1,206 @@
+{
+  "timestamp": "2025-09-24T10:53:06.126305",
+  "wms_analysis": {
+    "all_layers": {
+      "hs": "Spectral Significant Wave Height (Hm0)",
+      "tm02": "Spectral moments (0, 2) wave period (Tm02)",
+      "tpeak": "Wave Period estimated at spectral Peak (Tp)",
+      "dirm": "Mean Wave Direction",
+      "dirp": "Wave Principal Direction at spectral peak",
+      "fspr": "Normalized width of the Variance Spectral Density ",
+      "dspr": "Waves Directional Spread",
+      "hs_p1": "Spectral Significant Wave Height (Hm0) associated with the 1st partition",
+      "hs_p2": "Spectral Significant Wave Height (Hm0) associated with the 2nd partition",
+      "hs_p3": "Spectral Significant Wave Height (Hm0) associated with the 3rd partition",
+      "hs_p4": "Spectral Significant Wave Height (Hm0) associated with the 4th partition",
+      "hs_p5": "Spectral Significant Wave Height (Hm0) associated with the 5th partition",
+      "hs_p6": "Spectral Significant Wave Height (Hm0) associated with the 6th partition",
+      "tp_p1": "Peak Wave Period estimated from the Variance Density Spectrum associated with the 1st partition",
+      "tp_p2": "Peak Wave Period estimated from the Variance Density Spectrum associated with the 2nd partition",
+      "tp_p3": "Peak Wave Period estimated from the Variance Density Spectrum associated with the 3rd partition",
+      "tp_p4": "Peak Wave Period estimated from the Variance Density Spectrum associated with the 4th partition",
+      "tp_p5": "Peak Wave Period estimated from the Variance Density Spectrum associated with the 5th partition",
+      "tp_p6": "Peak Wave Period estimated from the Variance Density Spectrum associated with the 6th partition",
+      "dirp_p1": "Peak Direction of propagation associated with the 1st partition",
+      "dirp_p2": "Peak Direction of propagation associated with the 2nd partition",
+      "dirp_p3": "Peak Direction of propagation associated with the 3rd partition",
+      "dirp_p4": "Peak Direction of propagation associated with the 4th partition",
+      "dirp_p5": "Peak Direction of propagation associated with the 5th partition",
+      "dirp_p6": "Peak Direction of propagation associated with the 6th partition",
+      "transp_x": "Energy Transport along the x-axis",
+      "transp_y": "Energy Transport along the y-axis",
+      "depth": "Depth",
+      "u10:v10-group": "wind",
+      "u10:v10-mag": "Magnitude of wind",
+      "u10:v10-dir": "Direction of wind",
+      "u10": "Average Eastward Wind Component",
+      "v10": "Average Northward Wind Component"
+    },
+    "wave_layers": {
+      "hs": "Spectral Significant Wave Height (Hm0)",
+      "tm02": "Spectral moments (0, 2) wave period (Tm02)",
+      "tpeak": "Wave Period estimated at spectral Peak (Tp)",
+      "dirm": "Mean Wave Direction",
+      "dirp": "Wave Principal Direction at spectral peak",
+      "hs_p1": "Spectral Significant Wave Height (Hm0) associated with the 1st partition",
+      "hs_p2": "Spectral Significant Wave Height (Hm0) associated with the 2nd partition",
+      "hs_p3": "Spectral Significant Wave Height (Hm0) associated with the 3rd partition",
+      "hs_p4": "Spectral Significant Wave Height (Hm0) associated with the 4th partition",
+      "hs_p5": "Spectral Significant Wave Height (Hm0) associated with the 5th partition",
+      "hs_p6": "Spectral Significant Wave Height (Hm0) associated with the 6th partition",
+      "tp_p1": "Peak Wave Period estimated from the Variance Density Spectrum associated with the 1st partition",
+      "tp_p2": "Peak Wave Period estimated from the Variance Density Spectrum associated with the 2nd partition",
+      "tp_p3": "Peak Wave Period estimated from the Variance Density Spectrum associated with the 3rd partition",
+      "tp_p4": "Peak Wave Period estimated from the Variance Density Spectrum associated with the 4th partition",
+      "tp_p5": "Peak Wave Period estimated from the Variance Density Spectrum associated with the 5th partition",
+      "tp_p6": "Peak Wave Period estimated from the Variance Density Spectrum associated with the 6th partition",
+      "dirp_p1": "Peak Direction of propagation associated with the 1st partition",
+      "dirp_p2": "Peak Direction of propagation associated with the 2nd partition",
+      "dirp_p3": "Peak Direction of propagation associated with the 3rd partition",
+      "dirp_p4": "Peak Direction of propagation associated with the 4th partition",
+      "dirp_p5": "Peak Direction of propagation associated with the 5th partition",
+      "dirp_p6": "Peak Direction of propagation associated with the 6th partition",
+      "transp_x": "Energy Transport along the x-axis",
+      "transp_y": "Energy Transport along the y-axis",
+      "u10:v10-dir": "Direction of wind"
+    },
+    "total_layers": 33
+  },
+  "cog_analysis": {
+    "core_files": {
+      "main.py": {
+        "has_fastapi": true,
+        "has_tile_endpoint": true,
+        "has_cog_generation": true,
+        "uses_matplotlib": true,
+        "file_size_lines": 540
+      }
+    },
+    "plotting_capabilities": {
+      "available_plot_types": [
+        "contourf",
+        "contour",
+        "pcolormesh",
+        "imshow",
+        "discrete",
+        "discrete_cmap"
+      ],
+      "antialiasing_enabled": false,
+      "antialiasing_disabled": true,
+      "supports_contourf": true,
+      "supports_pcolormesh": true,
+      "supports_imshow": true,
+      "has_colormap_handling": true,
+      "has_levels_handling": true
+    },
+    "configuration": {
+      "config.json": {
+        "root-path": "/app/datasets"
+      },
+      "dev_config.json": {
+        "root-path": "/Users/anujdivesh/Desktop/django/production"
+      },
+      "prod_config.json": {
+        "root-path": "/mnt/data/ocean_portal/datasets"
+      },
+      "dataset_mapper.json": {
+        "5": "7",
+        "3": "13",
+        "4": "5",
+        "6": "19",
+        "7": "8",
+        "8": "4",
+        "15": "3",
+        "16": "11",
+        "17": "12",
+        "18": "10",
+        "19": "6",
+        "20": "8",
+        "26": "12",
+        "27": "21",
+        "28": "14",
+        "29": "16",
+        "30": "18",
+        "31": "15",
+        "32": "17",
+        "35": "8",
+        "36": "8",
+        "37": "8",
+        "38": "10",
+        "39": "8",
+        "41": "22",
+        "47": "8",
+        "2": "1",
+        "10": "1",
+        "11": "1",
+        "12": "1"
+      }
+    }
+  },
+  "insights": {
+    "layer_coverage": {
+      "wms_wave_layers_count": 26,
+      "key_wave_variables": [
+        "hs",
+        "tm02",
+        "tpeak",
+        "dirm",
+        "dirp",
+        "hs_p1",
+        "hs_p2",
+        "hs_p3",
+        "hs_p4",
+        "hs_p5"
+      ],
+      "critical_variables": [
+        "hs",
+        "dirm",
+        "dirp",
+        "tm02",
+        "tpeak"
+      ],
+      "missing_in_wms": []
+    },
+    "visual_quality": {
+      "cog_antialiasing_status": "disabled",
+      "wms_likely_antialiased": true,
+      "cog_plot_options": [
+        "contourf",
+        "contour",
+        "pcolormesh",
+        "imshow",
+        "discrete",
+        "discrete_cmap"
+      ],
+      "cog_supports_smooth_rendering": true
+    },
+    "performance": {
+      "wms_approach": "Pre-rendered tiles, instant delivery",
+      "cog_approach": "On-demand generation, processing overhead",
+      "cog_caching_status": "unknown",
+      "wms_always_current": false,
+      "cog_data_freshness": "Real-time (OPeNDAP source)"
+    },
+    "functionality": {
+      "wms_provides": [
+        "Standard tile service",
+        "Multiple layers",
+        "Predefined styles"
+      ],
+      "cog_provides": [
+        "Custom styling",
+        "On-demand processing",
+        "Direct data access"
+      ],
+      "cog_has_api": true,
+      "cog_tile_serving": true
+    },
+    "recommendations": [
+      "\ud83c\udfa8 VISUAL: Enable antialiasing in plotters.py (change 'antialiased': False to True) for smoother output matching WMS quality",
+      "\u26a1 PERFORMANCE: WMS serves 26 wave layers. Consider implementing caching for frequently requested COG tiles.",
+      "\ud83d\udd27 FUNCTIONALITY: You have both contourf and pcolormesh. Use contourf for smooth interpolated display, pcolormesh for raw data performance.",
+      "\ud83e\uddea TESTING: Generate sample tiles for hs, dirm, and tm02 to compare visual output with WMS",
+      "\ud83d\udd04 INTEGRATION: Test COG tiles in your existing widgets by replacing WMS URLs with COG tile endpoints"
+    ]
+  }
+}

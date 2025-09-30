@@ -81,9 +81,14 @@ BOSS_LAYER_*.md
 
 # Python analysis scripts (temporary)
 *cog_analysis*.py
+cog_wms_comparison_tool.py
 simple_cog_analysis.py
 test_cog_improvements.py
 COG_FUNDAMENTALS_DEMO.py
+
+# Widget-specific documentation
+plugin/*/COUNTRY_CONFIG_README.md
+plugin/*/OceanExpertAPI_*.md
 
 # Build directories for all widgets
 plugin/*/build/

@@ -1,5 +1,5 @@
 /**
- * World-Class Marine Legend Component
+ * Marine Legend Component
  * Displays professional oceanographic legends with proper scientific formatting
  */
 

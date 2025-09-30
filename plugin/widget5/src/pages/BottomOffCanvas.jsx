@@ -8,7 +8,7 @@ import useMapContainerRect from "../hooks/useMapContainerRect";
 // ---- Variables & config shared between modules ----
 // BottomOffCanvas now works dynamically with available forecast data
 
-const FORECAST_VARIABLE_KEYS = ['hs', 'tm02', 'tpeak', 'tp_p1', 'dirm'];
+const FORECAST_VARIABLE_KEYS = ['hs', 'tm02', 'tpeak', 'dirm'];
 
 // ---- Centralized fetching helpers ----
 async function fetchLayerTimeseries(layer, data) {

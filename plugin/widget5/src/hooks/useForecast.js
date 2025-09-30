@@ -193,7 +193,7 @@ function normalizeRange(min, max) {
 }
 
 export const useForecast = (config) => {
-  const { WAVE_FORECAST_LAYERS, WAVE_BUOYS, bounds, addWMSTileLayer } = config;
+  const { WAVE_FORECAST_LAYERS, STATIC_LAYERS, WAVE_BUOYS, bounds, addWMSTileLayer } = config;
 
   // State management
   const [showBuoyCanvas, setShowBuoyCanvas] = useState(false);
@@ -301,7 +301,23 @@ export const useForecast = (config) => {
     async function fetchCapabilities() {
       setCapTime((prev) => ({ ...prev, loading: true }));
       try {
-        const selectedLayer = WAVE_FORECAST_LAYERS.find(l => l.value === selectedWaveForecast);
+        // Find layer in forecast layers first, then static layers
+        let selectedLayer = WAVE_FORECAST_LAYERS.find(l => l.value === selectedWaveForecast);
+        if (!selectedLayer) {
+          selectedLayer = STATIC_LAYERS.find(l => l.value === selectedWaveForecast);
+        }
+        
+        // Skip capabilities fetch for static layers
+        if (selectedLayer?.isStatic) {
+          setCapTime({
+            loading: false,
+            start: new Date(),
+            end: new Date(),
+            stepHours: 1
+          });
+          return;
+        }
+        
         const capsLayer = selectedLayer?.composite ? selectedLayer.layers[0] : selectedLayer;
         if (!capsLayer?.wmsUrl) throw new Error("WMS URL not defined for layer.");
         
@@ -351,7 +367,7 @@ export const useForecast = (config) => {
     if (selectedWaveForecast) {
         fetchCapabilities();
     }
-  }, [selectedWaveForecast, WAVE_FORECAST_LAYERS]);
+  }, [selectedWaveForecast, WAVE_FORECAST_LAYERS, STATIC_LAYERS]);
 
   // Derived time state
   const totalSteps = capTime.loading || !capTime.start || !capTime.end ? 0 : Math.max(0, Math.floor((capTime.end - capTime.start) / (capTime.stepHours * 60 * 60 * 1000)));
@@ -523,11 +539,15 @@ export const useForecast = (config) => {
 
     if (!activeLayers.waveForecast) return;
 
-    const selected = dynamicLayers.find(l => l.value === selectedWaveForecast);
+    // Check dynamic layers first, then static layers
+    let selected = dynamicLayers.find(l => l.value === selectedWaveForecast);
+    if (!selected) {
+      selected = STATIC_LAYERS.find(l => l.value === selectedWaveForecast);
+    }
     if (!selected) return;
 
     const layersToAdd = selected.composite ? selected.layers : [selected];
-    const isTimeDimensionless = selected.id === 200;
+    const isTimeDimensionless = selected.isStatic || selected.id === 200;
 
     layersToAdd.forEach(layerConfig => {
       let wmsLayer;
@@ -565,7 +585,7 @@ export const useForecast = (config) => {
       wmsLayerRefs.current.push(wmsLayer);
     });
 
-  }, [activeLayers.waveForecast, selectedWaveForecast, handleShow, currentSliderDateStr, capTime.loading, wmsOpacity, dynamicLayers, addWMSTileLayer]);
+  }, [activeLayers.waveForecast, selectedWaveForecast, handleShow, currentSliderDateStr, capTime.loading, wmsOpacity, dynamicLayers, STATIC_LAYERS, addWMSTileLayer]);
 
   // Playback timer
   useEffect(() => {
@@ -663,7 +683,11 @@ export const useForecast = (config) => {
     };
 
     const dynamicLayer = findLayerConfig(dynamicLayers);
-    const fallbackLayer = findLayerConfig(WAVE_FORECAST_LAYERS);
+    // Try to find in forecast layers first, then static layers
+    let fallbackLayer = findLayerConfig(WAVE_FORECAST_LAYERS);
+    if (!fallbackLayer) {
+      fallbackLayer = findLayerConfig(STATIC_LAYERS);
+    }
     const layerConfig = dynamicLayer || fallbackLayer;
 
     if (layerConfig?.legendUrl) {
@@ -685,7 +709,7 @@ export const useForecast = (config) => {
       placeholder.textContent = 'Legend unavailable for this layer';
       container.appendChild(placeholder);
     }
-  }, [dynamicLayers, selectedWaveForecast, WAVE_FORECAST_LAYERS]);
+  }, [dynamicLayers, selectedWaveForecast, WAVE_FORECAST_LAYERS, STATIC_LAYERS]);
 
   return {
     // State

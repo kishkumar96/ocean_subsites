@@ -93,7 +93,7 @@ const ModernHeader = ({ modelRunTime }) => {
             fontSize: '0.9rem',
             fontWeight: '300'
           }}>
-            World-Class Marine Forecasting • Pacific Community (SPC) Data
+            Marine Forecasting • Pacific Community (SPC) Data
           </p>
         </div>
       </div>

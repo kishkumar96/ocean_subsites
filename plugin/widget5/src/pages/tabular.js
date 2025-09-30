@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 // to be used by other components like `timeseries.js`.
 // For this example, we'll keep them here but acknowledge they should be centralized.
 
-// --- World-Class Color Schemes ---
+// --- Marine Color Schemes ---
 
 // Helper to interpolate between two colors
 const lerpColor = (a, b, amount) => {
@@ -114,7 +114,6 @@ const getVariableDefinition = (key) => {
     'hs': { key: "hs", label: "Wave{0.17-1.66/viridis/1}" },
     'tm02': { key: "tm02", label: "Wave Period{0-20/Spectral/0}" },  // ENHANCED: Spectral divergent
     'tpeak': { key: "tpeak", label: "Peak Wave Period{9-14/Magenta/0}" },
-    'tp_p1': { key: "tp_p1", label: "Wind Wave Period{0-29/Plasma/0}" },
     'dirm': { key: "dirm", label: "Wave direction{0/dir}" },
   };
   

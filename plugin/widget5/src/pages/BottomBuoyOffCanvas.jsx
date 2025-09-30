@@ -40,7 +40,7 @@ function computePanelBounds() {
   return { min, max, initial };
 }
 
-const MODEL_VARIABLES = ["hs_p1", "tp_p1", "dirp_p1"];
+const MODEL_VARIABLES = ["hs_p1", "dirp_p1"];
 const LATEST_CAPABILITY_URL = "https://gemthreddshpc.spc.int/thredds/wms/POP/model/country/spc/forecast/hourly/COK/Rarotonga_UGRID.nc?service=WMS&version=1.3.0&request=GetCapabilities";
 const PREVIOUS_CAPABILITY_URL = "https://gemthreddshpc.spc.int/thredds/wms/POP/model/country/spc/forecast/hourly/COK/Rarotonga_UGRID_01.nc?service=WMS&version=1.3.0&request=GetCapabilities";
 
@@ -196,8 +196,8 @@ async function fetchCombinedForecastData() {
         )
       ]);
       console.log(previousData)
-      // // Debug: print the full JSON for tp_p1 and dirp_p1
-      // if (v === "tp_p1" || v === "dirp") {
+      // // Debug: print the full JSON for direction component
+      // if (v === "dirp") {
       //   //console.log(`Full latestData for ${v}:`, latestData);
       //   //console.log(`Full previousData for ${v}:`, previousData);
       // }
@@ -653,7 +653,6 @@ function BottomBuoyOffCanvas({ show, onHide, buoyId }) {
     // Debug: log the modelData.ranges and the arrays for each variable
     console.log('modelData.ranges:', modelData.ranges);
     //console.log('hs_p1:', modelData.ranges?.hs_p1?.values);
-    //console.log('tp_p1:', modelData.ranges?.tp_p1?.values);
     //console.log('dirp_p1:', modelData.ranges?.dirp_p1?.values);
     plotlyModelData = [
       {
@@ -664,15 +663,6 @@ function BottomBuoyOffCanvas({ show, onHide, buoyId }) {
         mode: 'lines',
         line: { color: MODEL_COLORS[0], width: 2, dash: 'dot' },
         yaxis: 'y',
-      },
-      {
-        x: labels,
-        y: modelData.ranges?.tp_p1?.values || [],
-        name: "Wind Wave Period (Model)",
-        type: 'scatter',
-        mode: 'lines',
-        line: { color: MODEL_COLORS[1], width: 2, dash: 'dot' },
-        yaxis: 'y2',
       }
     ];
     //console.log('plotlyModelData:', plotlyModelData);
@@ -860,7 +850,7 @@ function BottomBuoyOffCanvas({ show, onHide, buoyId }) {
       scroll={true}
     >
 
-      {/* World-Class Drag Handle */}
+      {/* Drag Handle */}
       <div
         className={`world-class-drag-handle ${isDarkMode ? '' : 'light-mode'}`}
         onMouseDown={onMouseDown}
@@ -870,7 +860,7 @@ function BottomBuoyOffCanvas({ show, onHide, buoyId }) {
       {/* Professional Header */}
       <div className={`world-class-header ${isDarkMode ? '' : 'light-mode'}`}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          {/* World-Class Tab Navigation */}
+        {/* Tab Navigation */}
           <div className={`world-class-tabs ${isDarkMode ? '' : 'light-mode'}`}>
             {tabLabels.map(tab => (
               <button
@@ -898,7 +888,7 @@ function BottomBuoyOffCanvas({ show, onHide, buoyId }) {
         </div>
       </div>
       <Offcanvas.Body className={`world-class-content`}>
-        {/* World-Class Loading State */}
+        {/* Loading State */}
         {activeTab === "buoy" && loading && (
           <div className="world-class-loading">
             <div className="world-class-spinner"></div>
@@ -908,7 +898,7 @@ function BottomBuoyOffCanvas({ show, onHide, buoyId }) {
           </div>
         )}
         
-        {/* World-Class Error State */}
+        {/* Error State */}
         {activeTab === "buoy" && fetchError && (
           <div className={`world-class-error ${isDarkMode ? '' : 'light-mode'}`}>
             <strong>Data Fetch Error</strong><br />
@@ -1062,8 +1052,6 @@ function BottomBuoyOffCanvas({ show, onHide, buoyId }) {
                       );
                       console.log("hs_p1 ::" + modelData.ranges?.hs_p1?.values);
                       console.log("dirp_p1 ::" + modelData.ranges?.dirp_p1?.values);
-                      console.log("tp_p1 ::" + modelData.ranges?.tp_p1?.values);
-                      
 
                       modelTraces = [
                         {
@@ -1074,15 +1062,6 @@ function BottomBuoyOffCanvas({ show, onHide, buoyId }) {
                           mode: 'lines',
                           line: { color: MODEL_COLORS[0], width: 2, dash: 'dot' },
                           yaxis: 'y',
-                        },
-                        {
-                          x: modelLabels,
-                          y: modelData.ranges?.tp_p1?.values || [],
-                          name: 'Wind Wave Period (Model)',
-                          type: 'scatter',
-                          mode: 'lines',
-                          line: { color: MODEL_COLORS[1], width: 2, dash: 'dot' },
-                          yaxis: 'y2',
                         },
                         {
                           x: modelLabels,

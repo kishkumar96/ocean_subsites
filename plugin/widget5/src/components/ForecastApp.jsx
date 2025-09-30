@@ -5,6 +5,7 @@ import WorldClassLegend from './WorldClassLegend';
 
 const ForecastApp = ({ 
   WAVE_FORECAST_LAYERS,
+  ALL_LAYERS,
   selectedWaveForecast,
   setSelectedWaveForecast,
   opacity,
@@ -25,74 +26,17 @@ const ForecastApp = ({
   isUpdatingVisualization,
   currentSliderDateStr
 }) => {
-  const [currentValue, setCurrentValue] = useState('Loading...');
   const [legendVisible, setLegendVisible] = useState(true);
 
-
-  // Find selected layer configuration
-  const selectedLayer = WAVE_FORECAST_LAYERS.find(l => l.value === selectedWaveForecast);
-
-  // Generic function to extract units from a legend URL
-  const getUnitsFromLegend = (url) => {
-    if (!url) return '';
-    const match = url.match(/unit=([^&]+)/);
-    return match ? match[1] : '';
-  };
-
-  // Derive display info directly from the selected layer object
-  const displayInfo = selectedLayer 
-    ? { name: selectedLayer.label, units: getUnitsFromLegend(selectedLayer.legendUrl) }
-    : { name: 'Unknown', units: '' };
-
-
-  //Update current values
-  useEffect(() => {
-    const updateCurrentValue = () => {
-      if (!selectedLayer) return;
-
-       // Find the active WMS layer to query - look for layers with getFeatureInfo method
-       const map = mapInstance?.current;
-       if (!map || !activeLayers.waveForecast || !setBottomCanvasData) return;
-
-       // Try to find the specific WMS layer for the selected forecast
-       let wmsLayer = Object.values(map._layers).find(layer =>
-         layer?.options?.layers === selectedWaveForecast && typeof layer.getFeatureInfo === 'function'
-       );
-
-       // Fallback 1: look for any WMS layer with getFeatureInfo method
-       if (!wmsLayer) {
-         wmsLayer = Object.values(map._layers).find(layer =>
-           typeof layer.getFeatureInfo === 'function'
-         );
-       }
-
-       // Fallback 2: if still no layer found, check if we have at least some layers loaded
-       if (!wmsLayer) {
-         const totalLayers = Object.keys(map._layers).length;
-         if (totalLayers === 0) {
-           setCurrentValue("Loading map...");
-         } else {
-           setCurrentValue("Loading data...");
-         }
-         return;
-      }
-
-       wmsLayer.getFeatureInfo(map.getCenter(), { autoShow: false })
-         .then(data => {
-           setCurrentValue(data?.featureInfo);
-         })
-         .catch(() => setCurrentValue("N/A"));
-    };
-
-      updateCurrentValue();
-  }, [selectedLayer, sliderIndex, activeLayers.waveForecast, mapInstance, selectedWaveForecast, setBottomCanvasData, currentSliderDateStr]);
+  // Find selected layer configuration for legend display (use ALL_LAYERS to include static layers)
+  const selectedLayer = ALL_LAYERS.find(l => l.value === selectedWaveForecast);
 
   // Effect to handle initial composite layer selection.
   // If the initially selected layer is a composite one (e.g., "Wave Height + Dir"),
   // this automatically switches the selection to its primary data sub-layer
   // to ensure a variable button is active in the UI.
   useEffect(() => {
-    const initialLayer = WAVE_FORECAST_LAYERS.find(l => l.value === selectedWaveForecast);
+    const initialLayer = ALL_LAYERS.find(l => l.value === selectedWaveForecast);
     // If the initially selected layer is composite, find its primary data layer
     // and update the selection. This prevents trying to fetch capabilities for a
     // container layer that has no WMS URL.
@@ -102,7 +46,7 @@ const ForecastApp = ({
         setSelectedWaveForecast(primaryLayer.value);
       }
     }
-  }, [selectedWaveForecast, setSelectedWaveForecast, WAVE_FORECAST_LAYERS]);
+  }, [selectedWaveForecast, setSelectedWaveForecast, ALL_LAYERS]);
 
   const handleVariableChange = (layerValue) => {
     setSelectedWaveForecast(layerValue);
@@ -257,7 +201,7 @@ const ForecastApp = ({
         <div className="control-group">
           <h3>📊 Forecast Variables</h3>
           <div className="variable-buttons">
-            {WAVE_FORECAST_LAYERS.filter(layer => !layer.composite).map((layer) => {
+            {ALL_LAYERS.filter(layer => !layer.composite).map((layer) => {
               // Shorten labels to fit better in buttons
               const getShortLabel = (label) => {
                 const labelMap = {
@@ -324,21 +268,6 @@ const ForecastApp = ({
             <div className="forecast-info">
               <div>Forecast Length: <strong>{totalSteps + 1} hours</strong></div>
             </div>
-          </div>
-        </div>
-
-        <div className="control-group">
-          <h3>📈 Current Values</h3>
-          <div className="forecast-info">
-            <div>Variable: <span>{displayInfo.name}</span></div>
-            <div className="forecast-value">{currentValue}</div>
-            <div className="forecast-units">{displayInfo.units}</div>
-            {isUpdatingVisualization && (
-              <div className="dynamic-update-indicator">
-                <span className="update-spinner">🔄</span>
-                <span>AI-optimizing visualization...</span>
-              </div>
-            )}
           </div>
         </div>
 

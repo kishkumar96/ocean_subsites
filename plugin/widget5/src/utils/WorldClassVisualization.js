@@ -1,5 +1,5 @@
 /**
- * World-Class Oceanographic Visualization System
+ * Marine Visualization System
  * Implements state-of-the-art techniques used by NOAA, ECMWF, and leading marine forecast centers
  */
 
@@ -213,8 +213,6 @@ class WorldClassVisualization {
     if (!selectedPalette) {
       if (variable === 'tpeak') {
         selectedPalette = "seq-YlGnBu"; // Use YlGnBu for tpeak (server verified compatible)
-      } else if (variable === 'tp_p1') {
-        selectedPalette = "plasma"; // Use plasma for wind wave period
       } else if (variable === 'tm02') {
         selectedPalette = "spectral"; // Use spectral for mean periods
       } else if (variable === 'hs') {
@@ -242,7 +240,6 @@ class WorldClassVisualization {
     const layerMapping = {
       'tm02': 'cook_forecast/tm02',
       'tpeak': 'cook_forecast/tpeak', 
-      'tp_p1': 'cook_forecast/tp_p1',
       'hs': 'cook_forecast/hs',
       'dirm': 'cook_forecast/dirm',
       'raro_inun': 'raro_inun/Band1'

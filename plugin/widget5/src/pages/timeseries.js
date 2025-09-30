@@ -48,13 +48,6 @@ const VARIABLE_CONFIGS = {
     range: { min: 9, max: 14 },
     palette: 'plasma'
   },
-  tp_p1: {
-    label: 'Wind Wave Period',
-    unit: 's',
-    yaxis: 'y2',
-    range: { min: 0, max: 29 },
-    palette: 'plasma'
-  },
   dirm: {
     label: 'Mean Wave Direction',
     unit: '°',
@@ -170,7 +163,7 @@ function Timeseries({ perVariableData }) {
       return;
     }
 
-    const variableKeys = ['hs', 'tm02', 'tpeak', 'tp_p1'];
+    const variableKeys = ['hs', 'tm02', 'tpeak'];
     const traces = [];
 
     variableKeys.forEach((key) => {

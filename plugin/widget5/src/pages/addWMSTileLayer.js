@@ -67,15 +67,6 @@ const addWMSTileLayer = (map, url, options = {}, handleShow) => {
         }
     }
 
-    // Handle tp_p1 (Wind wave period) layer configuration
-    if (targetLayerName.includes('tp_p1')) {
-        // Ensure proper color scale range for Cook Islands wind wave period data
-        if (!finalOptions.colorscalerange) {
-            finalOptions.colorscalerange = '0,29.32';
-            console.log('🌊 Setting Cook Islands tp_p1 color scale range: 0-29.32s');
-        }
-    }
-
     // Handle raro_inun (Rarotonga inundation) layer configuration
     if (targetLayerName.includes('raro_inun')) {
         // Ensure proper color scale range for inundation data
@@ -119,15 +110,13 @@ const addWMSTileLayer = (map, url, options = {}, handleShow) => {
             tile._originalWMSUrl = tile.src;
         }
         
-        // Enhanced error detection for tpeak, tp_p1, and inundation layer issues
+        // Enhanced error detection for tpeak and inundation layer issues
         const isTpeakLayer = targetLayerName.includes('tpeak');
-        const isTp_p1Layer = targetLayerName.includes('tp_p1');
         const isInundationLayer = targetLayerName.includes('raro_inun');
-        const isLimitedDataLayer = isTpeakLayer || isTp_p1Layer;
-        
+        const isLimitedDataLayer = isTpeakLayer;
+
         if (isLimitedDataLayer && consecutiveErrors <= 2) {
-            const layerType = isTpeakLayer ? 'Peak wave period' : 'Wind wave period';
-            console.warn(`🌊 ${layerType} data may not be available for current time - this is normal for limited temporal coverage`);
+            console.warn('🌊 Peak wave period data may not be available for current time - this is normal for limited temporal coverage');
             // For limited data layers, don't show as many error messages since limited temporal data is expected
         } else if (isInundationLayer && consecutiveErrors <= 2) {
             console.warn('🌧️ Rarotonga inundation layer error - checking configuration');
@@ -135,7 +124,6 @@ const addWMSTileLayer = (map, url, options = {}, handleShow) => {
             console.warn('🌊 Marine forecast: Tile load failed, implementing recovery strategy');
         } else if (consecutiveErrors === 10 && !serverErrorNotified) {
             const layerType = isTpeakLayer ? 'Peak wave period' : 
-                             isTp_p1Layer ? 'Wind wave period' : 
                              isInundationLayer ? 'Rarotonga inundation' : 
                              'Marine forecast';
             console.warn(`🌊 Cook Islands ${layerType}: Experiencing server connectivity issues. Attempting recovery...`);

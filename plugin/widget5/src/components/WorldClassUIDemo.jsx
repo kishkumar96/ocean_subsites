@@ -16,7 +16,7 @@ const WorldClassUIDemo = () => {
   return (
     <div style={{ height: '100vh', background: '#0f172a', padding: '20px' }}>
       <div style={{ marginBottom: '20px', color: '#f1f5f9' }}>
-        <h2>🌊 World-Class Oceanographic Dashboard Demo</h2>
+        <h2>🌊 Oceanographic Dashboard Demo</h2>
         <button 
           onClick={() => setIsDarkMode(!isDarkMode)}
           style={{
@@ -70,13 +70,13 @@ const WorldClassUIDemo = () => {
           borderRadius: '16px 16px 0 0'
         }}
       >
-        {/* World-Class Drag Handle */}
+        {/* Drag Handle */}
         <div className={`world-class-drag-handle ${isDarkMode ? '' : 'light-mode'}`} />
         
-        {/* Professional Header */}
+        {/* Header */}
         <div className={`world-class-header ${isDarkMode ? '' : 'light-mode'}`}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            {/* World-Class Tab Navigation */}
+            {/* Tab Navigation */}
             <div className={`world-class-tabs ${isDarkMode ? '' : 'light-mode'}`}>
               {tabLabels.map(tab => (
                 <button

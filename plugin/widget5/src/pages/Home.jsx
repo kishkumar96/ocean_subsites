@@ -90,14 +90,6 @@ const variableConfigMap = {
     belowmincolor: "transparent",
     abovemaxcolor: "extend"
   }),
-  tp_p1: () => ({
-    style: "default-scalar/psu-plasma",
-    // Use actual server data range for Cook Islands wind wave period
-    colorscalerange: "0,29.32",
-    numcolorbands: 200,
-    belowmincolor: "transparent",
-    abovemaxcolor: "extend"
-  }),
   inun: () => ({
     style: "default-scalar/seq-Blues",
     colorscalerange: "-0.05,1.63",
@@ -185,16 +177,13 @@ function CookIslandsForecast() {
         wmsUrl: "https://gem-ncwms-hpc.spc.int/ncWMS/wms",
         legendUrl: getWorldClassLegendUrl('tpeak', '9.985,13.68', 's'),
         description: "Enhanced peak period analysis with actual data range (9.985-13.68s) using magma color gradation"
-      },
-      {
-        label: "🌊 Wind Wave Period",
-        value: "cook_forecast/tp_p1", 
-        ...getWorldClassConfig('tp_p1'),
-        id: 6,
-        wmsUrl: "https://gem-ncwms-hpc.spc.int/ncWMS/wms",
-        legendUrl: getWorldClassLegendUrl('tp_p1', '0,29.32', 's'),
-        description: "Wind wave period component with plasma color scheme (0-29.32s range)"
-      },
+      }
+    ];
+  }, []);
+
+  // Static layers (no time dimension) - these are not forecast variables
+  const STATIC_LAYERS = useMemo(() => {
+    return [
       {
         label: "🌧️ Rarotonga Inundation",
         value: "raro_inun/Band1",
@@ -203,17 +192,25 @@ function CookIslandsForecast() {
         dataset: 'raro_inun',
         wmsUrl: "https://gem-ncwms-hpc.spc.int/ncWMS/wms",
         legendUrl: getRarotongaInundationLegendUrl(),
-        description: "Modeled inundation depth for Rarotonga (0–1.63 m above ground)"
+        description: "Modeled inundation depth for Rarotonga (0–1.63 m above ground)",
+        isStatic: true // Flag to identify static layers
       }
     ];
   }, []);
   
+  // Combined layers for components that need all layers
+  const ALL_LAYERS = useMemo(() => {
+    return [...WAVE_FORECAST_LAYERS, ...STATIC_LAYERS];
+  }, [WAVE_FORECAST_LAYERS, STATIC_LAYERS]);
+
   const cookIslandsConfig = useMemo(() => ({
     WAVE_FORECAST_LAYERS,
+    STATIC_LAYERS,
+    ALL_LAYERS,
     WAVE_BUOYS: [], // No buoys for Cook Islands
     bounds,
     addWMSTileLayer,
-  }), [WAVE_FORECAST_LAYERS]);
+  }), [WAVE_FORECAST_LAYERS, STATIC_LAYERS, ALL_LAYERS]);
   
   const {
     showBuoyCanvas, setShowBuoyCanvas,
@@ -244,6 +241,7 @@ function CookIslandsForecast() {
       <ModernHeader modelRunTime={capTime.start} />
       <ForecastApp
         WAVE_FORECAST_LAYERS={dynamicLayers}
+        ALL_LAYERS={ALL_LAYERS}
         selectedWaveForecast={selectedWaveForecast}
         setSelectedWaveForecast={setSelectedWaveForecast}
         opacity={wmsOpacity}
@@ -266,7 +264,7 @@ function CookIslandsForecast() {
 
       <LegendCleanup 
         selectedWaveForecast={selectedWaveForecast}
-        WAVE_FORECAST_LAYERS={WAVE_FORECAST_LAYERS}
+        WAVE_FORECAST_LAYERS={ALL_LAYERS}
       />
       
       <BottomOffCanvas

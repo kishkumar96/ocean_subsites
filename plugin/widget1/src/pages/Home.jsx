@@ -88,12 +88,12 @@ const WAVE_FORECAST_LAYERS = [
   {
     label: "Mean Wave Period",
     value: "niue_forecast/tm02",
-    style: "default-scalar/x-Sst",
+    style: "default-scalar/psu-plasma",  // Upgraded to world-class Plasma palette
     colorscalerange: "0,20",
     id: 4,
     wmsUrl: "https://gem-ncwms-hpc.spc.int/ncWMS/wms",
-    numcolorbands: 250,
-    legendUrl: 'https://ocean-plotter.spc.int/plotter/GetLegendGraphic?layer_map=43&mode=standard&min_color=0&max_color=20&step=1&color=jet&unit=s',
+    numcolorbands: 256,  // Maximum resolution for smooth gradients
+    legendUrl: 'https://ocean-plotter.spc.int/plotter/GetLegendGraphic?layer_map=43&mode=professional&min_color=0&max_color=20&step=1&color=plasma&unit=s',
   },
   {
     label: "Peak Wave Period",

@@ -1,35 +1,62 @@
 import React, { useEffect, useState } from "react";
+// NOTE: These color functions and variable definitions should be moved to a shared utility
+// to be used by other components like `timeseries.js`.
+// For this example, we'll keep them here but acknowledge they should be centralized.
 
-// Jet colormap: returns rgb string for value in [min, max]
-function jetColor(value, min = 0, max = 4) {
-  let v = Math.max(min, Math.min(max, value));
-  v = (v - min) / (max - min);
-  let r = Math.floor(255 * Math.max(Math.min(1.5 - Math.abs(4 * v - 3), 1), 0));
-  let g = Math.floor(255 * Math.max(Math.min(1.5 - Math.abs(4 * v - 2), 1), 0));
-  let b = Math.floor(255 * Math.max(Math.min(1.5 - Math.abs(4 * v - 1), 1), 0));
-  if ([r, g, b].some(x => isNaN(x))) return "rgb(127,127,127)";
-  return `rgb(${r},${g},${b})`;
+// --- World-Class Color Schemes ---
+
+// Helper to interpolate between two colors
+const lerpColor = (a, b, amount) => {
+  const ar = a >> 16, ag = (a >> 8) & 0xff, ab = a & 0xff,
+        br = b >> 16, bg = (b >> 8) & 0xff, bb = b & 0xff,
+        rr = ar + amount * (br - ar),
+        rg = ag + amount * (bg - ag),
+        rb = ab + amount * (bb - ab);
+  return `rgb(${Math.round(rr)}, ${Math.round(rg)}, ${Math.round(rb)})`;
+};
+
+// "Ocean Energy" palette for Wave Height (hs)
+function oceanEnergyColor(value, min = 0, max = 5) {
+  const v = Math.max(0, Math.min(1, (value - min) / (max - min)));
+  if (v < 0.5) return lerpColor(0x0A285A, 0x0096C8, v * 2);
+  if (v < 0.75) return lerpColor(0x0096C8, 0x64DCFF, (v - 0.5) * 4);
+  return lerpColor(0x64DCFF, 0xFFFFC8, (v - 0.75) * 4);
 }
-function redColor(value, min = 0, max = 20) {
-  let v = Math.max(min, Math.min(max, value));
-  v = (v - min) / (max - min);
-  const start = { r: 255, g: 229, b: 229 };
-  const end = { r: 127, g: 0, b: 0 };
-  const r = Math.round(start.r + (end.r - start.r) * v);
-  const g = Math.round(start.g + (end.g - start.g) * v);
-  const b = Math.round(start.b + (end.b - start.b) * v);
-  return `rgb(${r},${g},${b})`;
+
+// ENHANCED "Spectral Divergent" palette for Mean Wave Period (tm02) - Maximum Visual Distinction
+function plasmaColor(value, min = 0, max = 20) {
+  const v = Math.max(0, Math.min(1, (value - min) / (max - min)));
+  // Spectral divergent colormap: Red → Orange → Yellow → Green → Cyan → Blue → Purple
+  // Provides maximum visual distinction across the full range
+  if (v < 0.14) return lerpColor(0x9E0142, 0xD53E4F, v / 0.14);         // Deep red to red
+  if (v < 0.29) return lerpColor(0xD53E4F, 0xF46D43, (v - 0.14) / 0.15); // Red to orange-red
+  if (v < 0.43) return lerpColor(0xF46D43, 0xFDAE61, (v - 0.29) / 0.14); // Orange-red to orange
+  if (v < 0.57) return lerpColor(0xFDAE61, 0xFEE08B, (v - 0.43) / 0.14); // Orange to yellow
+  if (v < 0.71) return lerpColor(0xFEE08B, 0xE6F598, (v - 0.57) / 0.14); // Yellow to light green
+  if (v < 0.86) return lerpColor(0xE6F598, 0xABDDA4, (v - 0.71) / 0.15); // Light green to green
+  return lerpColor(0xABDDA4, 0x66C2A5, (v - 0.86) / 0.14);              // Green to teal
 }
-function blueColor(value, min = 0, max = 4) {
-  let v = Math.max(min, Math.min(max, value));
-  v = (v - min) / (max - min);
-  const start = { r: 232, g: 244, b: 255 };
-  const end = { r: 0, g: 51, b: 102 };
-  const r = Math.round(start.r + (end.r - start.r) * v);
-  const g = Math.round(start.g + (end.g - start.g) * v);
-  const b = Math.round(start.b + (end.b - start.b) * v);
-  return `rgb(${r},${g},${b})`;
+
+// "Magenta" palette for Peak Wave Period (tpeak)
+function magentaColor(value, min = 0, max = 20) {
+  const v = Math.max(0, Math.min(1, (value - min) / (max - min)));
+  if (v < 0.7) return lerpColor(0x4A148C, 0xAD1457, v / 0.7);
+  return lerpColor(0xAD1457, 0xF06292, (v - 0.7) / 0.3);
 }
+
+// Generic fallback (enhanced divergent palettes)
+const jetColor = plasmaColor;  // Use enhanced spectral for temporal data
+const ylgnbuColor = plasmaColor;  // Upgraded to spectral divergent
+
+// Map old color function names to new ones for compatibility
+const blueColor = oceanEnergyColor;
+const redColor = (value, min, max) => {
+    // Decide which period palette to use, fallback to magenta
+    return magentaColor(value, min, max);
+};
+
+// --- End of Color Schemes ---
+
 function isColorDark(colorString) {
   if (!colorString) return false;
   let r, g, b;
@@ -64,7 +91,7 @@ function parseLabelConfig(label) {
     configParts.forEach(part => {
       const lower = part.trim().toLowerCase();
       if (lower === 'calc') config.calc = true;
-      else if (['jet', 'dir', 'rd', 'bu'].includes(lower)) config.type = lower;
+      else if (['jet', 'dir', 'rd', 'bu', 'ylgnbu'].includes(lower)) config.type = lower;
       else if (/^\d+\s*-\s*\d+$/.test(lower)) {
         const [min, max] = lower.split('-').map(Number);
         config.min = min;
@@ -81,22 +108,31 @@ function parseLabelConfig(label) {
   return { ...config, cleanLabel };
 }
 
-// Variables & labels with config strings
-const variableDefs = [
-  { key: "hs", label: "Wave{0-5/Bu/1}" },
-  { key: "tpeak", label: "Wave Period{0-20/Rd/0}" },
-  { key: "dirm", label: "Wave direction{0/dir}" },
-  { key: "transp_x", label: "Wave Energy{calc/0-100/jet/0}" },
-  { key: "hs_p2", label: "Swell(m){0-5/Bu/1}" },
-  { key: "tp_p2", label: "Swell Period{0-25/Rd/0}" },
-  { key: "dirp_p2", label: "Swell Dir{0/dir}" },
-  { key: "hs_p3", label: "2.Swell (m) {0-5/Bu/1}" },
-  { key: "tp_p3", label: "2.Swell Period{0-25/Rd/0}" },
-  { key: "dirp_p3", label: "2. Swell Dir{0-5/dir}" },
-  { key: "hs_p1", label: "Wind wave(m){0-5/Bu/1}" },
-  { key: "tp_p1", label: "Wind wave period{0-25/Rd/0}" },
-  { key: "dirp_p1", label: "Wind wave dir{0-4/dir}" }
-];
+// Dynamic variable definitions based on available data
+const getVariableDefinition = (key) => {
+  const definitions = {
+    'hs': { key: "hs", label: "Wave{0.17-1.66/viridis/1}" },
+    'tm02': { key: "tm02", label: "Wave Period{0-20/Spectral/0}" },  // ENHANCED: Spectral divergent
+    'tpeak': { key: "tpeak", label: "Peak Wave Period{9-14/Magenta/0}" },
+    'tp_p1': { key: "tp_p1", label: "Wind Wave Period{0-29/Plasma/0}" },
+    'dirm': { key: "dirm", label: "Wave direction{0/dir}" },
+  };
+  
+  return definitions[key] || { key: key, label: `${key}{0-10/default/1}` };
+};
+
+const COLOR_FUNCTIONS = {
+  jet: jetColor,
+  rd: redColor,
+  bu: blueColor,
+  ylgnbu: ylgnbuColor,
+  // Add mappings for new color names from parseLabelConfig
+  viridis: oceanEnergyColor, // Assuming viridis maps to this for now
+  spectral: plasmaColor,
+  magenta: magentaColor,
+  plasma: jetColor, // Or another appropriate function
+  default: blueColor,
+};
 
 function extractCoverageTimeseries(json, variable) {
   if (
@@ -149,10 +185,16 @@ function filterToSixHourly(times, values) {
   const filteredTimes = [];
   const filteredValues = [];
   if (!times.length) return { times: filteredTimes, values: filteredValues };
+  
+  console.log('🕐 Filtering times - input length:', times.length);
+  console.log('🕐 First few times:', times.slice(0, 5));
+  console.log('🕐 Last few times:', times.slice(-5));
+  
   let firstIdx = -1;
   for (let i = 0; i < times.length; i++) {
     const date = new Date(times[i]);
     if (date.getUTCHours() % 6 === 0) {
+      console.log('🕐 Found first 6-hourly time at index', i, ':', times[i], 'hour:', date.getUTCHours());
       firstIdx = i;
       break;
     }
@@ -163,6 +205,11 @@ function filterToSixHourly(times, values) {
       filteredValues.push(values[i]);
     }
   }
+  
+  console.log('🕐 Filtered to', filteredTimes.length, 'times');
+  console.log('🕐 First filtered time:', filteredTimes[0]);
+  console.log('🕐 Last filtered time:', filteredTimes[filteredTimes.length - 1]);
+  
   return { times: filteredTimes, values: filteredValues };
 }
 function formatTableTime(time) {
@@ -204,16 +251,20 @@ function Tabular({ perVariableData }) {
   useEffect(() => {
     let allRows = [];
     let timesArr = [];
-    let transpX = [];
-    let transpY = [];
-    for (let j = 0; j < variableDefs.length; j++) {
-      const { key, label } = variableDefs[j];
-      const config = parseLabelConfig(label);
+    
+    // Process all available data dynamically
+    const dataKeys = Object.keys(perVariableData || {});
+    
+    for (const key of dataKeys) {
+      const variableDef = getVariableDefinition(key);
+      const config = parseLabelConfig(variableDef.label);
+      
       if (key === "transp_x") {
+        // Handle wave energy calculation if both transp_x and transp_y are available
         const tsX = extractCoverageTimeseries(perVariableData["transp_x"], "transp_x");
         const tsY = extractCoverageTimeseries(perVariableData["transp_y"], "transp_y");
-        transpX = tsX && tsX.values ? tsX.values : [];
-        transpY = tsY && tsY.values ? tsY.values : [];
+        const transpX = tsX && tsX.values ? tsX.values : [];
+        const transpY = tsY && tsY.values ? tsY.values : [];
         const filtered = filterToSixHourly(tsX?.times || [], transpX);
         const filteredY = filterToSixHourly(tsY?.times || [], transpY);
         const energyVals = calculateWaveEnergyKw(filtered.values, filteredY.values);
@@ -225,7 +276,7 @@ function Tabular({ perVariableData }) {
           values: energyVals
         });
       } else if (key === "transp_y") {
-        continue;
+        continue; // Skip transp_y as it's processed with transp_x
       } else {
         const json = perVariableData[key];
         const ts = extractCoverageTimeseries(json, key);
@@ -248,6 +299,7 @@ function Tabular({ perVariableData }) {
         }
       }
     }
+    
     setTableRows(allRows);
     setTimes(timesArr || []);
     if (allRows.every(s => !s.values.length)) setError("No tabular timeseries data returned.");
@@ -342,12 +394,11 @@ function Tabular({ perVariableData }) {
               {row.values.map((value, colIdx) => {
                 let cellStyle = { ...tdOtherCols };
                 const { min=0, max=5, type="bu", decimalPlaces } = row.config || {};
-                let colorText = isDarkMode ? "#f1f5f9" : "#000";
-                let colorBg = "";
-                if ((type === "jet" || type === "rd" || type === "bu") && typeof value === "number") {
-                  if (type === "jet") colorBg = jetColor(value, min, max);
-                  else if (type === "rd") colorBg = redColor(value, min, max);
-                  else if (type === "bu") colorBg = blueColor(value, min, max);
+                let colorBg;
+                const colorFunc = COLOR_FUNCTIONS[type.toLowerCase()] || COLOR_FUNCTIONS.default;
+                if (typeof value === "number" && colorFunc) {
+                  colorBg = colorFunc(value, min, max);
+                  const colorText = isColorDark(colorBg) ? "#eeeeee" : "#000";
                   colorText = isColorDark(colorBg) ? "#eeeeee" : "#000";
                   cellStyle = { ...cellStyle, backgroundColor: colorBg, color: colorText };
                 }

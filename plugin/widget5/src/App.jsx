@@ -3,6 +3,8 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Home from './pages/Home';
 import './App.css';
 import Header from './components/header';
+import './utils/NotificationManager'; // Initialize notification system
+import { initConsoleErrorSuppressor } from './utils/ConsoleErrorSuppressor';
 // import TokenError from './components/TokenError';
 // import { validateTokenOnLoad, extractTokenFromURL } from './utils/tokenValidator';
 
@@ -18,6 +20,9 @@ function App() {
     // Authentication disabled for Cook Islands widget
     console.log('Cook Islands widget initialized without authentication');
     setIsAuthenticated(true);
+    
+    // Initialize console error suppressor for known WMS server issues
+    initConsoleErrorSuppressor();
     // setIsLoading is disabled since loading state is not used
     
     /* ORIGINAL AUTHENTICATION CODE - COMMENTED OUT
@@ -109,7 +114,13 @@ function App() {
   */
 
   return (
-    <Router basename={process.env.PUBLIC_URL}>
+    <Router 
+      basename={process.env.NODE_ENV === 'development' ? '/' : process.env.PUBLIC_URL}
+      future={{
+        v7_startTransition: true,
+        v7_relativeSplatPath: true
+      }}
+    >
       <div style={{ 
         backgroundColor: 'var(--color-background)', 
         minHeight: '100vh',

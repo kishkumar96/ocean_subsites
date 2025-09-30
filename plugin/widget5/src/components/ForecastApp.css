@@ -1,0 +1,1261 @@
+/* ForecastApp.css - Modern Marine Forecast Interface */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.forecast-app {
+  height: 100vh;
+  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+  color: white;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  overflow-x: hidden;
+}
+
+.forecast-app::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M0 50 Q25 30 50 50 T100 50 V100 H0" fill="rgba(255,255,255,0.02)"/></svg>') repeat-x;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Header styles removed since we use ModernHeader component */
+
+.main-container {
+  display: grid;
+  grid-template-columns: 1fr 350px;
+  gap: 1rem;
+  height: calc(100vh - 60px);
+  padding: 1rem;
+}
+
+.map-section {
+  background: rgba(255, 255, 255, 0.1);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+  position: relative;
+}
+
+.legend-overlay {
+  position: absolute;
+  top: 80px; /* Moved down to avoid Leaflet layer controls */
+  right: 16px;
+  max-height: calc(100% - 96px); /* Adjusted for new top position */
+  overflow-y: auto;
+  z-index: 1000;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.5rem;
+}
+
+.legend-overlay .world-class-legend {
+  margin: 0;
+  pointer-events: auto;
+}
+
+.legend-overlay__toggle {
+  pointer-events: auto;
+  background: rgba(8, 26, 70, 0.75);
+  color: #90e0ef;
+  border: 1px solid rgba(144, 224, 239, 0.5);
+  padding: 0.25rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.legend-overlay__toggle:hover {
+  background: rgba(144, 224, 239, 0.25);
+  color: #ffffff;
+  border-color: rgba(144, 224, 239, 0.7);
+}
+
+.legend-overlay__toggle:focus-visible {
+  outline: 2px solid #90e0ef;
+  outline-offset: 2px;
+}
+
+.legend-overlay--hidden {
+  max-height: none;
+}
+
+@media (max-width: 768px) {
+  .legend-overlay {
+    position: static;
+    max-height: none;
+    margin-top: 1rem;
+    pointer-events: auto;
+  }
+
+  .map-section {
+    padding-bottom: 1rem;
+  }
+}
+
+.forecast-map {
+  height: 100%;
+  width: 100%;
+  border-radius: 12px;
+}
+
+/* Ensure Leaflet zoom controls don't overlap with legend */
+.leaflet-bottom.leaflet-right {
+  margin-bottom: 20px;
+}
+
+.forecast-map-legend {
+  background: rgba(0, 0, 0, 0.7);
+  padding: 0.75rem;
+  border-radius: 8px;
+  color: #ffffff;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(8px);
+  text-align: center;
+  /* Responsive sizing based on screen width */
+  min-width: 120px;
+  max-width: min(200px, 25vw);
+  width: auto;
+}
+
+.forecast-map-legend__image {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 4px;
+  /* Ensure legend is readable on all screen sizes */
+  min-height: 120px;
+  max-height: min(300px, 30vh);
+  object-fit: contain;
+}
+
+.forecast-map-legend__caption {
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: #90e0ef;
+  line-height: 1.2;
+}
+
+/* Responsive legend sizing for different screen sizes */
+@media (max-width: 480px) {
+  .forecast-map-legend {
+    max-width: min(140px, 30vw);
+    padding: 0.5rem;
+  }
+  
+  .forecast-map-legend__image {
+    min-height: 100px;
+    max-height: min(200px, 25vh);
+  }
+  
+  .forecast-map-legend__caption {
+    font-size: 0.7rem;
+  }
+}
+
+@media (min-width: 481px) and (max-width: 768px) {
+  .forecast-map-legend {
+    max-width: min(180px, 25vw);
+  }
+  
+  .forecast-map-legend__image {
+    min-height: 140px;
+    max-height: min(280px, 28vh);
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  .forecast-map-legend {
+    max-width: min(200px, 22vw);
+  }
+  
+  .forecast-map-legend__image {
+    min-height: 160px;
+    max-height: min(320px, 30vh);
+  }
+}
+
+@media (min-width: 1025px) {
+  .forecast-map-legend {
+    max-width: min(240px, 20vw);
+  }
+  
+  .forecast-map-legend__image {
+    min-height: 180px;
+    max-height: min(360px, 32vh);
+  }
+}
+
+.forecast-map-legend .legend-placeholder {
+  font-size: 0.75rem;
+  color: #dceef9;
+}
+
+/* =================
+   CARTOGRAPHIC ALIGNMENT SYSTEM
+   Align scale bar and legend at same height
+   ================= */
+
+/* Align Leaflet scale control with legend */
+.leaflet-control-scale {
+  /* Override Leaflet's default positioning */
+  position: absolute !important;
+  bottom: 20px !important;
+  left: 20px !important;
+  
+  /* Enhanced styling for visual harmony with legend */
+  background: rgba(0, 0, 0, 0.7) !important;
+  backdrop-filter: blur(8px);
+  border-radius: 8px !important;
+  border: none !important;
+  padding: 8px 12px !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  
+  /* Typography consistency with legend */
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+  font-weight: 600 !important;
+  color: #ffffff !important;
+}
+
+.leaflet-control-scale-line {
+  background: transparent !important;
+  border: 2px solid #90e0ef !important;
+  border-top: none !important;
+  color: #ffffff !important;
+  font-size: 0.75rem !important;
+  line-height: 1.2 !important;
+  padding: 2px 4px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  -moz-box-sizing: border-box !important;
+  box-sizing: border-box !important;
+  border-radius: 0 0 4px 4px !important;
+}
+
+/* Ensure legend aligns with scale bar by adjusting Leaflet control positioning */
+.leaflet-bottom.leaflet-right .forecast-map-legend {
+  margin-bottom: 20px !important;
+  margin-right: 0 !important;
+}
+
+.leaflet-bottom.leaflet-left .leaflet-control-scale {
+  margin-bottom: 20px !important;
+  margin-left: 0 !important;
+}
+
+/* Responsive alignment adjustments */
+@media (max-width: 480px) {
+  .leaflet-bottom.leaflet-left .leaflet-control-scale {
+    margin-bottom: 15px !important;
+    margin-left: 0 !important;
+    padding: 6px 10px !important;
+  }
+  
+  .leaflet-bottom.leaflet-right .forecast-map-legend {
+    margin-bottom: 15px !important;
+    margin-right: 0 !important;
+  }
+}
+
+@media (min-width: 1200px) {
+  .leaflet-control-scale {
+    bottom: 25px !important;
+    left: 25px !important;
+  }
+  
+  .forecast-map-legend {
+    bottom: 25px !important;
+    right: 25px !important;
+  }
+}
+
+
+
+
+
+.controls-panel {
+  background: rgba(0, 0, 0, 0.7);
+  border-radius: 12px;
+  padding: 1.5rem;
+  overflow-y: auto;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+#forecast-map-placeholder {
+  height: 100%;
+  width: 100%;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.map-placeholder-text {
+  font-size: 1.2rem;
+  opacity: 0.7;
+  text-align: center;
+}
+
+.forecast-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  position: relative;
+  z-index: 1;
+}
+
+.control-group {
+  margin-bottom: 2rem;
+}
+
+.control-group h3 {
+  color: #00d4ff;
+  margin-bottom: 1rem;
+  font-size: 1.2rem;
+  border-bottom: 2px solid #00d4ff;
+  padding-bottom: 0.5rem;
+}
+
+.variable-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  grid-auto-rows: 1fr; /* Make all grid rows equal height */
+  margin-bottom: 1rem;
+}
+
+@media (min-width: 400px) {
+  .variable-buttons {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.var-btn {
+  padding: 0.5rem;
+  background: linear-gradient(135deg, #2a5298 0%, #1e3c72 100%);
+  border: 2px solid #00d4ff;
+  color: white;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: bold;
+  text-align: center;
+  backdrop-filter: blur(5px);
+}
+
+.var-btn:hover {
+  background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(0, 212, 255, 0.3);
+}
+
+.var-btn.active {
+  background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%);
+  box-shadow: 0 0 20px rgba(0, 212, 255, 0.5);
+}
+
+.time-control {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.forecast-info {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.forecast-info > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.forecast-info span {
+  color: #90e0ef;
+  font-weight: 600;
+}
+
+.time-slider-container {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.time-slider {
+  width: 100%;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 8px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #1e3c72 0%, #00d4ff 100%);
+  outline: none;
+  margin: 1rem 0;
+}
+
+.time-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #00d4ff;
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+}
+
+.opacity-slider {
+  width: 100%;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 3px;
+  background: #ddd;
+  outline: none;
+  margin-top: 0.5rem;
+}
+
+.opacity-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #00d4ff;
+  cursor: pointer;
+}
+
+.time-slider::-webkit-slider-thumb:hover, .opacity-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+  box-shadow: 0 4px 15px rgba(0, 212, 255, 0.5);
+}
+
+.playback-controls {
+  display: flex;
+  justify-content: center;
+}
+
+.play-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 14px 32px;
+  background: linear-gradient(135deg, #00d4ff 0%, #48cae4 35%, #90e0ef 100%);
+  border: 1px solid rgba(144, 224, 239, 0.6);
+  border-radius: 999px;
+  color: #0b1f3a;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow:
+    0 12px 30px rgba(0, 212, 255, 0.22),
+    0 4px 12px rgba(11, 31, 58, 0.35);
+  transition: transform 0.25s ease, box-shadow 0.25s ease, background 0.25s ease, color 0.25s ease;
+  isolation: isolate;
+}
+
+.play-btn::before {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border-radius: inherit;
+  background: radial-gradient(circle at top, rgba(255, 255, 255, 0.35), transparent 60%);
+  opacity: 0.6;
+  transition: opacity 0.3s ease;
+  z-index: -1;
+}
+
+.play-btn::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: inherit;
+  background: conic-gradient(from 180deg at 50% 50%, rgba(0, 212, 255, 0.2), rgba(72, 202, 228, 0.15), transparent 70%);
+  filter: blur(12px);
+  opacity: 0;
+  transition: opacity 0.35s ease;
+  z-index: -2;
+}
+
+.play-btn span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.play-btn:hover {
+  transform: translateY(-3px);
+  box-shadow:
+    0 16px 40px rgba(0, 212, 255, 0.28),
+    0 6px 18px rgba(11, 31, 58, 0.45);
+}
+
+.play-btn:hover::before {
+  opacity: 0.9;
+}
+
+.play-btn:hover::after {
+  opacity: 1;
+}
+
+.play-btn:active {
+  transform: translateY(0);
+  box-shadow:
+    0 8px 18px rgba(0, 212, 255, 0.22),
+    0 3px 10px rgba(11, 31, 58, 0.4);
+}
+
+.play-btn:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.8);
+  outline-offset: 4px;
+}
+
+.play-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+  background: linear-gradient(135deg, rgba(0, 212, 255, 0.35), rgba(72, 202, 228, 0.35));
+  box-shadow: none;
+}
+
+.forecast-value {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #00d4ff;
+  text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+}
+
+.dynamic-update-indicator {
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  background: rgba(0, 212, 255, 0.1);
+  border: 1px solid rgba(0, 212, 255, 0.3);
+  border-radius: 6px;
+  font-size: 0.9rem;
+  color: #00d4ff;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.update-spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.ai-analysis-info {
+  background: rgba(0, 212, 255, 0.05);
+  border: 1px solid rgba(0, 212, 255, 0.2);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-top: 0.5rem;
+}
+
+.analysis-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+  padding: 0.25rem 0;
+}
+
+.analysis-item:last-child {
+  margin-bottom: 0;
+}
+
+.analysis-label {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 500;
+}
+
+.analysis-value {
+  font-size: 0.9rem;
+  color: #00d4ff;
+  font-weight: bold;
+  background: rgba(0, 212, 255, 0.1);
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  border: 1px solid rgba(0, 212, 255, 0.3);
+}
+
+.forecast-units {
+  text-align: center;
+  font-size: 1.1rem;
+  color: #90e0ef;
+  font-weight: 500;
+}
+
+.legend {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.legend-image {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+.opacity-control {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.opacity-control label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 500;
+}
+
+.data-info {
+  display: grid;
+  gap: 8px;
+  font-size: 0.9rem;
+}
+
+.data-info > div {
+  display: flex;
+  justify-content: space-between;
+  padding: 5px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.data-info strong {
+  color: #90e0ef;
+}
+
+.status-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(0, 0, 0, 0.9);
+  padding: 0.5rem 2rem;
+  font-size: 0.9rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #00ff00;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.2); opacity: 0.7; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* Modern Bottom Panel Styling */
+.offcanvas.offcanvas-bottom {
+  background: rgba(10, 36, 99, 0.95) !important;
+  backdrop-filter: blur(20px) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 20px 20px 0 0 !important;
+  color: white !important;
+  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.3) !important;
+  height: 35vh !important; /* Smaller default height */
+}
+
+.offcanvas.offcanvas-bottom .offcanvas-body {
+  background: transparent !important;
+}
+
+/* Modern drag handle */
+.offcanvas.offcanvas-bottom div[title="Drag to resize"] {
+  background: linear-gradient(90deg, rgba(255,255,255,0.1), rgba(255,255,255,0.2), rgba(255,255,255,0.1)) !important;
+  border-radius: 20px 20px 8px 8px !important;
+  border: none !important;
+}
+
+.offcanvas.offcanvas-bottom div[title="Drag to resize"] div {
+  background: rgba(255, 255, 255, 0.4) !important;
+  border-radius: 3px !important;
+  width: 50px !important;
+  height: 4px !important;
+}
+
+/* Modern tab buttons */
+.offcanvas.offcanvas-bottom button[aria-controls*="tab-panel"] {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  border-radius: 12px 12px 0 0 !important;
+  color: rgba(255, 255, 255, 0.8) !important;
+  font-weight: 500 !important;
+  transition: all 0.3s ease !important;
+  padding: 12px 24px !important;
+  margin: 0 4px !important;
+}
+
+.offcanvas.offcanvas-bottom button[aria-controls*="tab-panel"]:hover {
+  background: rgba(255, 255, 255, 0.15) !important;
+  color: white !important;
+  transform: translateY(-2px) !important;
+}
+
+.offcanvas.offcanvas-bottom button[aria-controls*="tab-panel"][style*="border-bottom: 2px solid rgb(0, 123, 255)"] {
+  background: linear-gradient(135deg, rgba(0, 212, 255, 0.2), rgba(72, 202, 228, 0.2)) !important;
+  border-bottom: 2px solid #00d4ff !important;
+  color: #00d4ff !important;
+  font-weight: 600 !important;
+  box-shadow: 0 4px 15px rgba(0, 212, 255, 0.2) !important;
+}
+
+/* Close button */
+.offcanvas.offcanvas-bottom button[aria-label="Close"] {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  color: rgba(255, 255, 255, 0.8) !important;
+  border-radius: 50% !important;
+  width: 36px !important;
+  height: 36px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: all 0.3s ease !important;
+}
+
+.offcanvas.offcanvas-bottom button[aria-label="Close"]:hover {
+  background: rgba(255, 100, 100, 0.2) !important;
+  color: #ff6464 !important;
+  transform: scale(1.1) !important;
+}
+
+/* Modern table styling */
+.offcanvas.offcanvas-bottom .table {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border-radius: 12px !important;
+  overflow: hidden !important;
+  backdrop-filter: blur(10px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.offcanvas.offcanvas-bottom .table tbody tr:nth-of-type(odd) {
+  background-color: rgba(255, 255, 255, 0.03) !important; /* Zebra striping */
+}
+
+.offcanvas.offcanvas-bottom .table th {
+  background: rgba(10, 36, 99, 0.8) !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  font-weight: 600 !important;
+  font-size: 0.85rem !important;
+  padding: 8px 6px !important;
+  text-align: center !important;
+}
+
+/* Base table cell styling - preserve original colors but enhance with modern effects */
+.offcanvas.offcanvas-bottom .table td {
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  font-size: 14px !important; /* Increased font size */
+  font-weight: 500 !important;
+  transition: all 0.2s ease !important;
+  position: relative !important;
+}
+
+/* Add subtle modern enhancement to colored cells */
+.offcanvas.offcanvas-bottom .table td:not(:first-child) {
+  backdrop-filter: blur(5px) !important;
+  border-radius: 2px !important;
+}
+
+/* Enhance hover effect while preserving colors */
+.offcanvas.offcanvas-bottom .table td:not(:first-child):hover {
+  transform: scale(1.05) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), inset 0 0 20px rgba(255, 255, 255, 0.1) !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  z-index: 10 !important;
+}
+
+/* Parameter name column */
+.offcanvas.offcanvas-bottom .table td:first-child {
+  background: rgba(10, 36, 99, 0.6) !important;
+  font-weight: 600 !important;
+  color: rgba(255, 255, 255, 0.95) !important;
+  text-align: left !important;
+  position: sticky !important; /* Freeze the column */
+  left: 0 !important;
+  z-index: 2 !important;
+}
+
+.offcanvas.offcanvas-bottom .table th:first-child {
+  background: rgba(10, 36, 99, 0.9) !important;
+  position: sticky !important; /* Freeze the header */
+  left: 0 !important;
+  z-index: 3 !important;
+}
+
+/* Enhance the existing colored cells with better contrast for dark theme */
+/* Blue wave height cells - keep original colors but enhance text */
+.offcanvas.offcanvas-bottom .table td[style*="background-color: rgb(120, 151, 181)"],
+.offcanvas.offcanvas-bottom .table td[style*="background-color: rgb(116, 148, 179)"],
+.offcanvas.offcanvas-bottom .table td[style*="background-color: rgb(124, 154, 184)"],
+.offcanvas.offcanvas-bottom .table td[style*="background-color: rgb(133, 162, 190)"],
+.offcanvas.offcanvas-bottom .table td[style*="background-color: rgb(143, 170, 196)"] {
+  color: #e0f4ff !important;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8) !important;
+  font-weight: 600 !important;
+}
+
+/* Green/yellow energy cells - dark text for contrast */
+.offcanvas.offcanvas-bottom .table td[style*="background-color: rgb(191, 255, 63)"],
+.offcanvas.offcanvas-bottom .table td[style*="background-color: rgb(110, 255, 144)"],
+.offcanvas.offcanvas-bottom .table td[style*="background-color: rgb(0, 207, 255)"] {
+  color: #1a1a2e !important;
+  text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.7) !important;
+  font-weight: 700 !important;
+}
+
+/* Blue energy cells - light text */  
+.offcanvas.offcanvas-bottom .table td[style*="background-color: rgb(0, 87, 255)"],
+.offcanvas.offcanvas-bottom .table td[style*="background-color: rgb(0, 19, 255)"],
+.offcanvas.offcanvas-bottom .table td[style*="background-color: rgb(0, 0, 226)"],
+.offcanvas.offcanvas-bottom .table td[style*="background-color: rgb(0, 0, 241)"] {
+  color: #e0f4ff !important;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.9) !important;
+  font-weight: 600 !important;
+}
+
+/* Red period cells - light text for contrast */
+.offcanvas.offcanvas-bottom .table td[style*="background-color: rgb(184, 101, 101)"],
+.offcanvas.offcanvas-bottom .table td[style*="background-color: rgb(190, 113, 113)"],
+.offcanvas.offcanvas-bottom .table td[style*="background-color: rgb(196, 123, 123)"],
+.offcanvas.offcanvas-bottom .table td[style*="background-color: rgb(201, 133, 133)"] {
+  color: #ffe0e0 !important;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8) !important;
+  font-weight: 600 !important;
+}
+
+/* Light blue/white cells - dark text */
+.offcanvas.offcanvas-bottom .table td[style*="background-color: white"],
+.offcanvas.offcanvas-bottom .table td[style*="background-color: rgb(232, 244, 255)"],
+.offcanvas.offcanvas-bottom .table td[style*="background-color: rgb(228, 241, 252)"] {
+  color: #1a1a2e !important;
+  text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.5) !important;
+  font-weight: 600 !important;
+}
+
+/* Scrollbar styling */
+.offcanvas.offcanvas-bottom ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.offcanvas.offcanvas-bottom ::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.offcanvas.offcanvas-bottom ::-webkit-scrollbar-thumb {
+  background: rgba(0, 212, 255, 0.6);
+  border-radius: 4px;
+}
+
+.offcanvas.offcanvas-bottom ::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 212, 255, 0.8);
+}
+
+/* Tab panel header */
+.offcanvas.offcanvas-bottom > div:first-child {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+}
+
+/* Wave direction arrows - make them more visible with modern styling */
+.offcanvas.offcanvas-bottom svg line {
+  stroke: #00d4ff !important;
+  stroke-width: 2.5 !important;
+  filter: drop-shadow(0 0 3px rgba(0, 212, 255, 0.5)) !important;
+}
+
+.offcanvas.offcanvas-bottom svg polygon {
+  fill: #00d4ff !important;
+  filter: drop-shadow(0 0 3px rgba(0, 212, 255, 0.5)) !important;
+}
+
+/* --- Modern Tooltip Styles --- */
+.leaflet-popup-content-wrapper {
+  background: linear-gradient(145deg, #1e3a5f, #0a2463) !important;
+  color: #fff !important;
+  border-radius: 12px !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4) !important;
+  border: 1px solid rgba(0, 212, 255, 0.3) !important;
+  backdrop-filter: blur(10px) !important;
+}
+
+.leaflet-popup-content {
+  margin: 15px 20px !important;
+  font-family: 'Segoe UI', sans-serif !important;
+  font-size: 15px !important;
+  line-height: 1.6 !important;
+}
+
+.leaflet-popup-tip {
+  background: #1e3a5f !important;
+}
+
+.tooltip-header {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #00d4ff;
+  border-bottom: 1px solid rgba(0, 212, 255, 0.2);
+  padding-bottom: 8px;
+  margin-bottom: 10px;
+}
+
+.tooltip-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tooltip-value {
+  font-size: 2rem;
+  font-weight: 700;
+  text-align: center;
+  color: #fff;
+  text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+}
+
+.tooltip-units {
+  font-size: 1.2rem;
+  font-weight: 400;
+  color: #90e0ef;
+  margin-left: 5px;
+}
+
+.tooltip-time, .tooltip-coords {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.7);
+  text-align: center;
+}
+
+.tooltip-button {
+  background: linear-gradient(135deg, #00d4ff, #48cae4);
+  border: none;
+  color: white;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: 15px;
+  width: 100%;
+}
+
+.offcanvas.offcanvas-bottom td svg {
+  display: inline-block !important;
+  vertical-align: middle !important;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .forecast-app {
+    padding: 15px;
+    width: 100vw;
+  }
+  
+  .forecast-header h1 {
+    font-size: 1.8rem;
+  }
+  
+  .forecast-controls {
+    gap: 15px;
+  }
+  
+  .control-group {
+    padding: 15px;
+  }
+  
+  .status-bar {
+    padding: 10px 15px;
+    font-size: 0.7rem;
+  }
+  
+  .forecast-value {
+    font-size: 1.8rem;
+  }
+}
+
+.tooltip-loader, .tooltip-error {
+  padding: 10px;
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+.tooltip-loader .spinner {
+  border: 3px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  border-top: 3px solid #00d4ff;
+  width: 24px;
+  height: 24px;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 10px;
+}
+
+
+@media (max-width: 480px) {
+  .forecast-header h1 {
+    font-size: 1.8rem;
+  }
+  
+  .forecast-subtitle {
+    font-size: 1rem;
+  }
+  
+  .control-group h3 {
+    font-size: 1.1rem;
+  }
+  
+  .forecast-value {
+    font-size: 1.8rem;
+  }
+}
+
+/* Enhanced Responsive Design - Consolidated */
+
+/* Ultra-wide screens (4K, Ultrawide monitors) */
+@media (min-width: 2560px) {
+  .main-container {
+    grid-template-columns: 1fr 450px;
+    gap: 2rem;
+    padding: 2rem;
+  }
+  
+  .controls-panel {
+    font-size: 1.1rem;
+  }
+  
+  .forecast-value {
+    font-size: 2.5rem;
+  }
+}
+
+/* Large desktops */
+@media (min-width: 1440px) and (max-width: 2559px) {
+  .main-container {
+    grid-template-columns: 1fr 400px;
+    gap: 1.5rem;
+  }
+}
+
+/* Standard desktops */
+@media (min-width: 1024px) and (max-width: 1439px) {
+  .main-container {
+    grid-template-columns: 1fr 350px;
+  }
+}
+
+/* Tablets (landscape) - Critical missing breakpoint */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .main-container {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr 350px;
+    gap: 0.75rem;
+    padding: 0.75rem;
+  }
+  
+  .controls-panel {
+    height: 330px;
+    padding: 1rem;
+  }
+  
+  .variable-buttons {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  .var-btn {
+    padding: 0.75rem 0.5rem;
+    font-size: 0.9rem;
+  }
+}
+
+/* Tablets (portrait) and large phones */
+@media (min-width: 481px) and (max-width: 767px) {
+  .main-container {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr 320px;
+    gap: 0.5rem;
+    padding: 0.5rem;
+  }
+  
+  .controls-panel {
+    height: 300px;
+    padding: 0.75rem;
+  }
+  
+  .variable-buttons {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.4rem;
+  }
+  
+  .var-btn {
+    padding: 0.6rem 0.4rem;
+    font-size: 0.85rem;
+    line-height: 1.2;
+  }
+  
+  .control-group h3 {
+    font-size: 1rem;
+    margin-bottom: 0.75rem;
+  }
+  
+  .forecast-value {
+    font-size: 1.8rem;
+  }
+}
+
+/* Small phones */
+@media (max-width: 480px) {
+  .main-container {
+    grid-template-rows: 1fr 280px;
+    gap: 0.25rem;
+    padding: 0.25rem;
+  }
+  
+  .controls-panel {
+    height: 260px;
+    padding: 0.5rem;
+  }
+  
+  .variable-buttons {
+    grid-template-columns: 1fr;
+    gap: 0.3rem;
+  }
+  
+  .var-btn {
+    padding: 0.5rem;
+    font-size: 0.8rem;
+    min-height: 40px;
+  }
+  
+  .forecast-value {
+    font-size: 1.8rem;
+  }
+}
+
+/* Touch-optimized controls for mobile devices */
+@media (max-width: 768px) {
+  /* Touch-friendly button sizing */
+  .var-btn {
+    min-height: 44px; /* Apple's recommended touch target size */
+    min-width: 44px;
+    padding: 0.75rem 0.5rem;
+    font-size: 0.9rem;
+    line-height: 1.2;
+    touch-action: manipulation; /* Optimize for touch */
+  }
+  
+  /* Enhanced time slider for touch interaction */
+  .time-slider {
+    height: 8px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    outline: none;
+    touch-action: manipulation;
+  }
+  
+  .time-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 24px;
+    height: 24px;
+    background: #00d4ff;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid white;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  }
+  
+  .time-slider::-moz-range-thumb {
+    width: 24px;
+    height: 24px;
+    background: #00d4ff;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid white;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  }
+  
+  /* Enhanced play button for touch */
+  .play-button {
+    min-height: 50px;
+    min-width: 80px;
+    font-size: 1rem;
+    border-radius: 25px;
+    touch-action: manipulation;
+    padding: 0.75rem 1.5rem;
+  }
+  
+  /* Opacity slider touch optimization */
+  .opacity-slider {
+    height: 6px;
+    -webkit-appearance: none;
+    appearance: none;
+    touch-action: manipulation;
+  }
+  
+  .opacity-slider::-webkit-slider-thumb {
+    width: 20px;
+    height: 20px;
+    background: #00d4ff;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 1px solid white;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  
+  /* Increase tap targets for control buttons */
+  .control-group h3 {
+    padding: 0.75rem 0;
+    margin-bottom: 1rem;
+  }
+}

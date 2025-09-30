@@ -398,8 +398,7 @@ function Tabular({ perVariableData }) {
                 const colorFunc = COLOR_FUNCTIONS[type.toLowerCase()] || COLOR_FUNCTIONS.default;
                 if (typeof value === "number" && colorFunc) {
                   colorBg = colorFunc(value, min, max);
-                  const colorText = isColorDark(colorBg) ? "#eeeeee" : "#000";
-                  colorText = isColorDark(colorBg) ? "#eeeeee" : "#000";
+                  let colorText = isColorDark(colorBg) ? "#eeeeee" : "#000";
                   cellStyle = { ...cellStyle, backgroundColor: colorBg, color: colorText };
                 }
                 const isDirection = type === "dir";

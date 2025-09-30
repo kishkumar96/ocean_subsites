@@ -48,5 +48,47 @@ Thumbs.db
 # Project-specific reports and verification scripts
 current_status_summary.sh
 antialiasing_fix_verification.sh
-COG_PORT_CONFIGURATION_FIX.md
-COOK_ISLANDS_WIDGET_SUMMARY.md
+check_status.sh
+deploy-cook-islands.sh
+test_wms_layers.sh
+
+# Analysis and temporary output files
+cog_analysis_output/
+focused_analysis_output/
+*.png
+!plugin/*/public/*.png
+!html/images/*.png
+
+# Development and documentation files (generated)
+COG_*.md
+COOK_ISLANDS_*.md
+ENHANCED_*.md
+INUNDATION_*.md
+LEGEND_*.md
+MULTI_LAYER_*.md
+PRODUCTION_*.md
+SERVICE_WORKER_*.md
+WAVE_PERIOD_*.md
+WIDGET*_*.md
+WORLD_CLASS_*.md
+CLEANUP_*.md
+COMPILATION_*.md
+TPEAK_*.md
+TP_P1_*.md
+WMS_*.md
+REFACTOR_SUMMARY.md
+BOSS_LAYER_*.md
+
+# Python analysis scripts (temporary)
+*cog_analysis*.py
+simple_cog_analysis.py
+test_cog_improvements.py
+COG_FUNDAMENTALS_DEMO.py
+
+# Build directories for all widgets
+plugin/*/build/
+
+# Test and temporary files
+*.test.png
+*_test.png
+*_optimized.png

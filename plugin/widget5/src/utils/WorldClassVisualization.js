@@ -212,7 +212,7 @@ class WorldClassVisualization {
     let selectedPalette = palette;
     if (!selectedPalette) {
       if (variable === 'tpeak') {
-        selectedPalette = "seq-YlGnBu"; // Use YlGnBu for tpeak (server verified compatible)
+        selectedPalette = "psu-magma"; // Use magma for tpeak (matches layer configuration)
       } else if (variable === 'tm02') {
         selectedPalette = "spectral"; // Use spectral for mean periods
       } else if (variable === 'hs') {
@@ -254,11 +254,11 @@ class WorldClassVisualization {
     const width = screenWidth <= 480 ? '50' : screenWidth <= 768 ? '60' : '70';
     const height = screenWidth <= 480 ? '220' : screenWidth <= 768 ? '260' : '300';
     
-    // CRITICAL: Server compatibility override for tpeak
+    // Use consistent palette configuration for tpeak
     let safePalette = palette;
-    if (variable === 'tpeak' && (palette === 'plasma' || palette === 'psu-plasma' || palette === 'magma' || palette === 'psu-magma')) {
-      safePalette = 'seq-YlGnBu'; // Use YlGnBu for tpeak (server verified compatible)
-      console.log('🌊 Overriding palette for tpeak: ' + palette + ' -> seq-YlGnBu (server compatibility)');
+    if (variable === 'tpeak' && palette === 'psu-magma') {
+      safePalette = 'psu-magma'; // Keep magma for tpeak (consistent with layer config)
+      console.log('🌊 Using magma palette for tpeak:', safePalette);
     }
     
     const correctPalette = this.constructor.scientificPalettes[safePalette] || safePalette;
@@ -301,10 +301,10 @@ class WorldClassVisualization {
     const [min, max] = range.split(',').map(parseFloat);
     const baseUrl = "https://ocean-plotter.spc.int/plotter/GetLegendGraphic";
     
-    // CRITICAL: Server compatibility override for tpeak
+    // Use consistent palette configuration for tpeak
     let safePalette = palette;
-    if (variable === 'tpeak' && (palette === 'plasma' || palette === 'psu-plasma' || palette === 'magma' || palette === 'psu-magma')) {
-      safePalette = 'seq-YlGnBu'; // Use YlGnBu for tpeak (server verified compatible)
+    if (variable === 'tpeak' && palette === 'psu-magma') {
+      safePalette = 'psu-magma'; // Keep magma for tpeak (consistent with layer config)
     }
     
     // Use simplified, stable parameters to avoid 500 errors
@@ -407,16 +407,23 @@ class WorldClassVisualization {
           wmsUrl: "https://gem-ncwms-hpc.spc.int/ncWMS/wms",
           id: 1001,
           legendUrl: this.getWorldClassLegendUrl("hs", "0.17,1.66", "m", "spectral"),
-          zIndex: 1
+          zIndex: 1,
+          // Add additional config needed for capabilities
+          style: "default-scalar/psu-viridis",
+          colorscalerange: "0.17,1.66",
+          numcolorbands: 256,
+          dataset: "cook_forecast"
         },
         {
-          value: "cook_forecast/dirm", 
+          value: "dirm", // THREDDS layer name (without dataset prefix)
           style: "black-arrow",
           colorscalerange: "",
-          wmsUrl: "https://gem-ncwms-hpc.spc.int/ncWMS/wms",
+          wmsUrl: "https://gemthreddshpc.spc.int/thredds/wms/POP/model/country/spc/forecast/hourly/COK/Rarotonga_UGRID.nc",
           id: 1002,
           zIndex: 2,
-          opacity: 0.9
+          opacity: 0.9,
+          // THREDDS-specific config (no dataset parameter needed)
+          description: "Wave direction arrows from THREDDS server"
         }
       ]
     };

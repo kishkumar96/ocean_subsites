@@ -16,7 +16,22 @@ export const useWMSCapabilities = (selectedLayer, allLayers) => {
     async function fetchCapabilities() {
       setCapTime((prev) => ({ ...prev, loading: true }));
       try {
-        const selectedLayerConfig = allLayers.find(l => l.value === selectedLayer);
+        // First try to find layer directly
+        let selectedLayerConfig = allLayers.find(l => l.value === selectedLayer);
+        
+        // If not found, check if it's a sub-layer of a composite layer
+        if (!selectedLayerConfig) {
+          for (const layer of allLayers) {
+            if (layer?.composite && layer?.layers) {
+              const subLayer = layer.layers.find(sub => sub?.value === selectedLayer);
+              if (subLayer) {
+                console.log(`🔍 Found sub-layer in composite: ${selectedLayer} in ${layer.value}`);
+                selectedLayerConfig = layer; // Use parent composite for general config
+                break;
+              }
+            }
+          }
+        }
         
         console.log(`🔍 Fetching capabilities for layer: ${selectedLayer}`);
         console.log(`🔍 Layer config:`, selectedLayerConfig);
@@ -35,12 +50,43 @@ export const useWMSCapabilities = (selectedLayer, allLayers) => {
           return;
         }
         
-        const capsLayer = selectedLayerConfig?.composite ? selectedLayerConfig.layers[0] : selectedLayerConfig;
-        if (!capsLayer?.wmsUrl) throw new Error("WMS URL not defined for layer.");
+        // Determine which layer to use for capabilities
+        let capsLayer = selectedLayerConfig;
+        if (selectedLayerConfig?.composite) {
+          // For composite layers, find the appropriate sub-layer for capabilities
+          // If we're looking for a specific sub-layer (like cook_forecast/hs), use that
+          const requestedSubLayer = selectedLayerConfig.layers?.find(sub => sub?.value === selectedLayer);
+          if (requestedSubLayer) {
+            capsLayer = requestedSubLayer;
+            console.log(`🔄 Using requested sub-layer for capabilities:`, capsLayer);
+          } else {
+            // Otherwise, prefer wave height layer for capabilities (not direction)
+            const waveHeightLayer = selectedLayerConfig.layers?.find(layer => 
+              layer.value && (layer.value.includes('hs') || layer.value.includes('height'))
+            );
+            capsLayer = waveHeightLayer || selectedLayerConfig.layers?.[0];
+            console.log(`🔄 Using preferred sub-layer for capabilities:`, capsLayer);
+          }
+        }
+        if (!capsLayer?.wmsUrl) {
+          console.error("Layer configuration missing wmsUrl:", {
+            selectedLayer: selectedLayer,
+            selectedLayerConfig: selectedLayerConfig,
+            capsLayer: capsLayer
+          });
+          throw new Error(`WMS URL not defined for layer: ${selectedLayer}`);
+        }
         
         let urlForCaps = capsLayer.wmsUrl;
+        const isThreddsServer = urlForCaps.includes('thredds');
+        
         if (!urlForCaps.toLowerCase().includes("request=getcapabilities")) {
           urlForCaps += (urlForCaps.includes("?") ? "&" : "?") + "SERVICE=WMS&REQUEST=GetCapabilities&VERSION=1.3.0";
+        }
+        
+        // THREDDS servers may need different handling
+        if (isThreddsServer) {
+          console.log(`🌐 Using THREDDS server for capabilities: ${urlForCaps}`);
         }
         
         console.log(`🌐 Fetching capabilities from: ${urlForCaps}`);
@@ -56,6 +102,13 @@ export const useWMSCapabilities = (selectedLayer, allLayers) => {
         const timeDim = parseTimeDimensionFromCapabilities(xml, capsLayer.value);
         if (!timeDim) {
           console.warn(`⚠️ No time dimension found for layer: ${capsLayer.value}`);
+          
+          // Special handling for THREDDS wave direction layers
+          if (isThreddsServer && capsLayer.value === 'dirm') {
+            console.log(`ℹ️ Wave direction layer from THREDDS - using time from wave height layer`);
+            // Wave direction uses same time as wave height, so we'll handle this in composite layer logic
+          }
+          
           // For layers without time dimension, treat as static
           setCapTime({
             loading: false,

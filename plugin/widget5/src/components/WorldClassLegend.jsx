@@ -3,6 +3,7 @@
  * Displays professional oceanographic legends with proper scientific formatting
  */
 
+/* eslint-disable no-unused-vars */
 import React from 'react';
 import './WorldClassLegend.css';
 import wmsStyleManager, { WMSStylePresets } from '../utils/WMSStyleManager';
@@ -51,16 +52,20 @@ const WorldClassLegend = ({
   showDescription = true,
   compactMode = false 
 }) => {
-  // Add missing state variables
-  const [collapsed, setCollapsed] = React.useState(false);
+  const collapsed = false;
+  const setCollapsed = () => {}; // No-op function
+  const legendSize = 'normal';
+  const setLegendSize = () => {}; // No-op function
   const legendBodyId = React.useMemo(() => `legend-body-${Math.random().toString(36).substr(2, 9)}`, []);
   const dynamicColorManager = React.useMemo(() => new DynamicColorManager(), []);
+  
   if (!selectedLayer) return null;
 
 
   const legendClassName = [
     'world-class-legend',
-    compactMode ? 'compact' : '',
+    legendSize === 'compact' ? 'compact' : '',
+    legendSize === 'micro' ? 'micro' : '',
     collapsed ? 'collapsed' : ''
   ].filter(Boolean).join(' ');
 
@@ -120,7 +125,10 @@ const WorldClassLegend = ({
         }
 
         const label = wmsStyleManager.getWaveHeightLabel(upperBound);
-        const description = wmsStyleManager.getWaveHeightDescription(previousValue, upperBound);
+        const description = wmsStyleManager.getWaveHeightDescription(previousValue, upperBound, { 
+          dataMax: maxValue,
+          location: variable?.includes('cook') ? 'Cook Islands' : 'Global'
+        });
         const rangeMidpoint = previousValue + (upperBound - previousValue) / 2;
         const referenceValue = Number.isFinite(rangeMidpoint) ? rangeMidpoint : upperBound;
         const normalizedMidpoint = Math.max(0, Math.min(1, (referenceValue - gradientMinValue) / effectiveRange));
@@ -142,7 +150,10 @@ const WorldClassLegend = ({
       });
 
       if (ranges.length === 0) {
-        const fallbackDescription = wmsStyleManager.getWaveHeightDescription(0, maxValue);
+        const fallbackDescription = wmsStyleManager.getWaveHeightDescription(0, maxValue, { 
+          dataMax: maxValue,
+          location: variable?.includes('cook') ? 'Cook Islands' : 'Global'
+        });
         const normalizedFallback = Math.max(0, Math.min(1, (maxValue - gradientMinValue) / effectiveRange));
         const fallbackColor = dynamicColorManager.interpolateViridis(normalizedFallback);
         ranges.push({
@@ -165,7 +176,10 @@ const WorldClassLegend = ({
           ? 1
           : Math.max(0, Math.min(1, (14 - gradientMinValue) / effectiveRange));
         const extremeColor = dynamicColorManager.interpolateViridis(extremeColorNormalized);
-        const description = wmsStyleManager.getWaveHeightDescription(14, Infinity);
+        const description = wmsStyleManager.getWaveHeightDescription(14, Infinity, { 
+          dataMax: maxValue,
+          location: variable?.includes('cook') ? 'Cook Islands' : 'Global'
+        });
         ranges.push({
           min: 14,
           max: Infinity,
@@ -621,16 +635,31 @@ const WorldClassLegend = ({
       <div className="legend-header">
         <div className="legend-header__top">
           <h3 className="legend-title">{legendInfo.title}</h3>
-          <button
-            type="button"
-            className="legend-toggle"
-            onClick={() => setCollapsed(prev => !prev)}
-            aria-expanded={!collapsed}
-            aria-controls={legendBodyId}
-            title={collapsed ? 'Expand legend' : 'Collapse legend'}
-          >
-            {collapsed ? 'Show Legend' : 'Hide Legend'}
-          </button>
+          <div className="legend-controls">
+            <button
+              type="button"
+              className="legend-size-toggle"
+              onClick={() => {
+                const sizes = ['normal', 'compact', 'micro'];
+                const currentIndex = sizes.indexOf(legendSize);
+                const nextIndex = (currentIndex + 1) % sizes.length;
+                setLegendSize(sizes[nextIndex]);
+              }}
+              title={`Current size: ${legendSize}. Click to cycle through sizes.`}
+            >
+              📏 {legendSize === 'normal' ? 'L' : legendSize === 'compact' ? 'M' : 'S'}
+            </button>
+            <button
+              type="button"
+              className="legend-toggle"
+              onClick={() => setCollapsed(prev => !prev)}
+              aria-expanded={!collapsed}
+              aria-controls={legendBodyId}
+              title={collapsed ? 'Expand legend' : 'Collapse legend'}
+            >
+              {collapsed ? 'Show' : 'Hide'}
+            </button>
+          </div>
         </div>
         {!collapsed && (
           <>
@@ -648,6 +677,9 @@ const WorldClassLegend = ({
         <div id={legendBodyId} className="legend-content">
           {legendInfo.displayType === 'gradient' ? (
           <div className="legend-gradient-wrapper">
+            {legendInfo.subtitle && (
+              <div className="legend-gradient__title">{legendInfo.subtitle}</div>
+            )}
             <div
               className="legend-gradient"
               role="img"
@@ -658,14 +690,73 @@ const WorldClassLegend = ({
                 style={{ backgroundImage: `linear-gradient(to top, ${legendInfo.gradientStops.join(', ')})` }}
               />
               {gradientScaleTicks.length > 0 && (
+                <div className="legend-gradient__ticks" aria-hidden="true">
+                  {gradientScaleTicks.map((tickValue, index) => {
+                    const minVal = gradientScaleTicks[0];
+                    const maxVal = gradientScaleTicks[gradientScaleTicks.length - 1];
+                    let position;
+                    
+                    if (maxVal !== minVal && Number.isFinite(tickValue) && Number.isFinite(minVal) && Number.isFinite(maxVal)) {
+                      position = ((tickValue - minVal) / (maxVal - minVal)) * 100;
+                    } else if (gradientScaleTicks.length > 1) {
+                      position = index * (100 / (gradientScaleTicks.length - 1));
+                    } else {
+                      position = 50;
+                    }
+                    
+                    position = Math.max(0, Math.min(100, position));
+                    
+                    return (
+                      <div
+                        key={`legend-tick-mark-${index}-${tickValue}`}
+                        className="legend-gradient__tick-mark"
+                        style={{ 
+                          position: 'absolute',
+                          top: `${100 - position}%`,
+                          transform: 'translateY(-50%)'
+                        }}
+                      />
+                    );
+                  })}
+                </div>
+              )}
+              {gradientScaleTicks.length > 0 && (
                 <div className="legend-gradient__scale" aria-hidden="true">
                   {gradientScaleTicks.map((tickValue, index) => {
                     const formattedTick = formatLegendValue(tickValue);
                     if (formattedTick === '') {
                       return null;
                     }
+                    
+                    // Calculate position based on value for non-uniform intervals
+                    const minVal = gradientScaleTicks[0];
+                    const maxVal = gradientScaleTicks[gradientScaleTicks.length - 1];
+                    let position;
+                    
+                    if (maxVal !== minVal && Number.isFinite(tickValue) && Number.isFinite(minVal) && Number.isFinite(maxVal)) {
+                      position = ((tickValue - minVal) / (maxVal - minVal)) * 100;
+                    } else if (gradientScaleTicks.length > 1) {
+                      position = index * (100 / (gradientScaleTicks.length - 1));
+                    } else {
+                      position = 50; // Center single tick
+                    }
+                    
+                    // Clamp position to prevent overflow
+                    position = Math.max(0, Math.min(100, position));
+                    
                     return (
-                      <span key={`legend-gradient-tick-${index}-${tickValue}`}>
+                      <span 
+                        key={`legend-gradient-tick-${index}-${tickValue}`}
+                        className="legend-gradient__tick"
+                        style={{ 
+                          position: 'absolute',
+                          top: `${100 - position}%`,
+                          transform: 'translateY(-50%)',
+                          left: '100%',
+                          marginLeft: '0.5rem'
+                        }}
+                        title={`${formattedTick}${unitSuffix}`}
+                      >
                         {formattedTick}
                         {unitSuffix}
                       </span>
@@ -675,7 +766,8 @@ const WorldClassLegend = ({
               )}
             </div>
 
-            <div className="legend-ranges">
+            {/* Legend ranges hidden - showing only gradient bar with numbers */}
+            <div className="legend-ranges" style={{ display: 'none' }}>
               {legendInfo.ranges.map((range, index) => (
                 <div
                   key={index}
@@ -698,27 +790,30 @@ const WorldClassLegend = ({
             </div>
           </div>
           ) : (
-            legendInfo.ranges.map((range, index) => (
-              <div
-                key={index}
-                className={`legend-item${range.isActive === false ? ' legend-item--inactive' : ''}`}
-                title={range.description || range.label}
-              >
-                <div 
-                  className="legend-color-box"
-                  style={{ backgroundColor: range.color }}
+            // Discrete legend items hidden - showing only gradient bar with numbers
+            <div style={{ display: 'none' }}>
+              {legendInfo.ranges.map((range, index) => (
+                <div
+                  key={index}
+                  className={`legend-item${range.isActive === false ? ' legend-item--inactive' : ''}`}
+                  title={range.description || range.label}
                 >
-                  {range.arrow && <span className="legend-arrow">{range.arrow}</span>}
+                  <div 
+                    className="legend-color-box"
+                    style={{ backgroundColor: range.color }}
+                  >
+                    {range.arrow && <span className="legend-arrow">{range.arrow}</span>}
+                  </div>
+                  <div className="legend-text">
+                    <span className="legend-value">{range.value}</span>
+                    <span className="legend-label">{range.label}</span>
+                    {range.description && showDescription && (
+                      <span className="legend-description">{range.description}</span>
+                    )}
+                  </div>
                 </div>
-                <div className="legend-text">
-                  <span className="legend-value">{range.value}</span>
-                  <span className="legend-label">{range.label}</span>
-                  {range.description && showDescription && (
-                    <span className="legend-description">{range.description}</span>
-                  )}
-                </div>
-              </div>
-            ))
+              ))}
+            </div>
           )}
         </div>
       )}
@@ -740,3 +835,4 @@ const WorldClassLegend = ({
 };
 
 export default WorldClassLegend;
+/* eslint-enable no-unused-vars */

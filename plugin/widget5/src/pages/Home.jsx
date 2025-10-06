@@ -27,32 +27,7 @@ const getResponsiveLegendDimensions = () => {
   return { width: '60', height: '320' };
 };
 
-// Responsive QGIS-style continuous legend URL generator
-const getQGISStyleLegendUrl = (variable, range, unit) => {
-  const baseUrl = "https://gem-ncwms-hpc.spc.int/ncWMS/wms";
-  
-  // Calculate responsive dimensions based on screen size
-  const { width, height } = getResponsiveLegendDimensions();
-  
-  // Choose appropriate palette based on variable type
-  let palette = 'psu-viridis'; // Default
-  if (variable === 'hs') {
-    palette = 'psu-viridis'; // Perceptually uniform Viridis palette for wave height
-  }
-  
-  const params = new URLSearchParams({
-    REQUEST: 'GetLegendGraphic',
-    LAYER: `cook_forecast/${variable}`,
-    PALETTE: palette,
-    COLORBARONLY: 'true',
-    WIDTH: width,
-    HEIGHT: height,
-    NUMCOLORBANDS: '256', // Continuous like QGIS
-    COLORSCALERANGE: range,
-    VERTICAL: 'true'
-  });
-  return `${baseUrl}?${params.toString()}`;
-};
+
 
 // World-class legend URL generator
 const getWorldClassLegendUrl = (variable, range, unit) => {
@@ -135,31 +110,8 @@ function CookIslandsForecast() {
       // 🌊 WORLD-CLASS COMPOSITE LAYER
       worldClassComposite,
       
-      // 🎯 INDIVIDUAL PROFESSIONAL LAYERS WITH QGIS-STYLE CONTINUOUS CLASSIFICATION
-      {
-        label: "🌊 Significant Wave Height ",
-        value: "cook_forecast/hs",
-        // Beaufort-inspired spectral classification reflecting actual data
-        style: "default-scalar/psu-viridis",
-        colorscalerange: "0.17,1.66", // Actual data range from WMS metadata
-        numcolorbands: 256, // Maximum resolution like QGIS continuous mode
-        belowmincolor: "transparent", // Transparent for values below minimum
-        abovemaxcolor: "extend", // Extend palette for extreme values
-        interpolation: "linear", // Linear interpolation like QGIS
-        id: 1,
-        wmsUrl: "https://gem-ncwms-hpc.spc.int/ncWMS/wms",
-        legendUrl: getQGISStyleLegendUrl('hs', '0.17,1.66', 'm'),
-        description: "Perceptually uniform Viridis ramp reflecting actual Cook Islands wave conditions (0.17-1.66m)"
-      },
-      {
-        label: "🧭 Wave Direction",
-        value: "cook_forecast/dirm",
-        ...getWorldClassConfig('dirm'),
-        id: 3,
-        wmsUrl: "https://gem-ncwms-hpc.spc.int/ncWMS/wms",
-        legendUrl: getWorldClassLegendUrl('dirm', '', '°'),
-        description: "High-contrast directional arrows optimized for marine navigation"
-      },
+
+
       {
         label: "⏱️ Mean Wave Period",
         value: "cook_forecast/tm02",

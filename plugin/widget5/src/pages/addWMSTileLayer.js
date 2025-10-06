@@ -1,5 +1,7 @@
 import L from 'leaflet';
 import $ from 'jquery';
+import WMSTileLoadingService from '../services/WMSTileLoadingService.js';
+import createCORSWMSLayer from '../utils/CORSWMSLayer.js';
 
 /**
  * Adds a    const handleTileError = (event) => {
@@ -89,121 +91,42 @@ const addWMSTileLayer = (map, url, options = {}, handleShow) => {
 
     // For ncWMS servers, we need to create a custom WMS layer that handles the coordinate transformation
     let wmsLayer;
-    // For non-ncWMS servers, use the standard WMS layer
-    wmsLayer = L.tileLayer.wms(url, finalOptions);
+    
+    // Use CORS-enabled layer for THREDDS servers
+    if (url.includes('thredds')) {
+      wmsLayer = createCORSWMSLayer(url, finalOptions);
+    } else {
+      // For non-ncWMS servers, use the standard WMS layer
+      wmsLayer = L.tileLayer.wms(url, finalOptions);
+    }
     
     // Add the layer to the map
     wmsLayer.addTo(map);
 
-    // Enhanced error handling for HTTP/2 protocol errors
-    const RETRY_LIMIT = 6; // Increased retry limit for server issues
-    const RETRY_DELAY = 1500; // Reduced delay for faster recovery
-    let consecutiveErrors = 0;
-    let serverErrorNotified = false;
+    // Initialize layer in the enhanced tile loading service
+    const layerId = `${targetLayerName}_${Date.now()}`;
+    WMSTileLoadingService.initializeLayer(layerId, targetLayerName, getLayerType(targetLayerName));
 
+    // Enhanced error handling using service
     const handleTileError = (e) => {
-        const tile = e.tile;
-        consecutiveErrors++;
-        
-        // Store original WMS URL before Leaflet replaces it with data URL
-        if (!tile._originalWMSUrl && tile.src && !tile.src.startsWith('data:')) {
-            tile._originalWMSUrl = tile.src;
-        }
-        
-        // Enhanced error detection for tpeak and inundation layer issues
-        const isTpeakLayer = targetLayerName.includes('tpeak');
-        const isInundationLayer = targetLayerName.includes('raro_inun');
-        const isLimitedDataLayer = isTpeakLayer;
-
-        if (isLimitedDataLayer && consecutiveErrors <= 2) {
-            console.warn('🌊 Peak wave period data may not be available for current time - this is normal for limited temporal coverage');
-            // For limited data layers, don't show as many error messages since limited temporal data is expected
-        } else if (isInundationLayer && consecutiveErrors <= 2) {
-            console.warn('🌧️ Rarotonga inundation layer error - checking configuration');
-        } else if (consecutiveErrors <= 3) {
-            console.warn('🌊 Marine forecast: Tile load failed, implementing recovery strategy');
-        } else if (consecutiveErrors === 10 && !serverErrorNotified) {
-            const layerType = isTpeakLayer ? 'Peak wave period' : 
-                             isInundationLayer ? 'Rarotonga inundation' : 
-                             'Marine forecast';
-            console.warn(`🌊 Cook Islands ${layerType}: Experiencing server connectivity issues. Attempting recovery...`);
-            serverErrorNotified = true;
-            
-            // Try to show user-friendly message
-            if (typeof window !== 'undefined' && window.showNotification) {
-                const message = isLimitedDataLayer 
-                    ? `${layerType} data may have limited availability for current time period`
-                    : 'Marine data server experiencing connectivity issues. Retrying automatically...';
-                window.showNotification(message, 'warning');
-            }
-        }
-        
-        // Progressive retry with exponential backoff for server issues
-        const retryDelay = RETRY_DELAY * Math.min(consecutiveErrors / 2, 4);
-        setTimeout(() => {
-            // Use stored original URL instead of current tile.src (which might be a data URL)
-            const originalUrl = tile._originalWMSUrl;
-            if (originalUrl && !originalUrl.startsWith('data:')) {
-                retryTile(tile, originalUrl, 1, retryDelay);
-            } else {
-                console.warn('🌊 Cannot retry tile: No valid WMS URL available for tile', tile);
-                // Don't let failed tiles accumulate errors
-                if (consecutiveErrors > 0) consecutiveErrors--;
-            }
-        }, retryDelay);
+        WMSTileLoadingService.handleTileError(layerId, e.tile, e);
     };
+    
+    // Helper function to determine layer type
+    function getLayerType(layerName) {
+        // tpeak is a full forecast layer with continuous data coverage
+        if (layerName.includes('raro_inun')) return 'static';
+        return 'forecast'; // All forecast layers including tpeak should be treated as 'forecast'
+    }
 
-    const retryTile = (tile, originalSrc, attempt, customDelay = RETRY_DELAY) => {
-        if (attempt <= RETRY_LIMIT && originalSrc && !originalSrc.startsWith('data:')) {
-            setTimeout(() => {
-                // Force tile refresh to bypass cache issues that might be causing HTTP/2 errors
-                const refreshedSrc = originalSrc.includes('?') 
-                    ? `${originalSrc}&_retry=${attempt}&_t=${Date.now()}`
-                    : `${originalSrc}?_retry=${attempt}&_t=${Date.now()}`;
-                
-                // Clear the tile source first to force reload
-                tile.src = '';
-                
-                // Set up success and error handlers before setting new source
-                const oldOnLoad = tile.onload;
-                const oldOnError = tile.onerror;
-                
-                tile.onload = () => {
-                    consecutiveErrors = Math.max(0, consecutiveErrors - 1);
-                    if (consecutiveErrors === 0) {
-                        console.log('🌊 Marine forecast tiles loading successfully');
-                        serverErrorNotified = false;
-                    }
-                    // Restore original onload if it existed
-                    if (oldOnLoad && typeof oldOnLoad === 'function') {
-                        oldOnLoad.call(tile);
-                    }
-                };
-                
-                tile.onerror = () => {
-                    // Only retry if we haven't exceeded the limit
-                    if (attempt < RETRY_LIMIT) {
-                        retryTile(tile, originalSrc, attempt + 1, customDelay);
-                    } else {
-                        console.error(`Failed to load WMS tile after ${RETRY_LIMIT} attempts:`, originalSrc);
-                        // Restore original onerror if it existed
-                        if (oldOnError && typeof oldOnError === 'function') {
-                            oldOnError.call(tile);
-                        }
-                    }
-                };
-                
-                // Set the new source
-                tile.src = refreshedSrc;
-            }, customDelay);
-        } else if (originalSrc && originalSrc.startsWith('data:')) {
-            console.warn('🌊 Skipping retry for data URL - no original WMS URL available');
-        } else {
-            console.error(`Failed to load WMS tile after ${RETRY_LIMIT} attempts:`, originalSrc);
-        }
-    };
+    // Enhanced error handling is now managed by WMSTileLoadingService
 
     wmsLayer.on('tileerror', handleTileError);
+    
+    // Add success handler to reset error tracking
+    wmsLayer.on('tileload', () => {
+        WMSTileLoadingService.resetErrorTracking(layerId);
+    });
 
     // Store the getFeatureInfo function on the layer for external use (returns Promise)
     wmsLayer.getFeatureInfo = function(latlng, requestOptions = {}) {

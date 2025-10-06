@@ -1,0 +1,68 @@
+/**
+ * Custom CSS for table component that can't be handled by CSS-in-JS
+ * Includes pseudo-selectors and webkit-specific styling
+ */
+
+/* Table container scrollbar styling */
+.tabular-container {
+  /* Custom scrollbar for webkit browsers */
+  scrollbar-width: thin;
+  scrollbar-color: #475569 #1e293b;
+}
+
+.tabular-container::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+.tabular-container::-webkit-scrollbar-track {
+  background: #1e293b;
+}
+
+.tabular-container::-webkit-scrollbar-thumb {
+  background: #475569;
+  border-radius: 6px;
+}
+
+.tabular-container::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+/* Light mode scrollbar */
+.tabular-container.light-mode {
+  scrollbar-color: #cbd5e1 #f1f5f9;
+}
+
+.tabular-container.light-mode::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+.tabular-container.light-mode::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+}
+
+.tabular-container.light-mode::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Table focus styles for keyboard navigation */
+.tabular-table:focus-within {
+  outline: 3px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+.tabular-table.light-mode:focus-within {
+  outline: 3px solid #2563eb;
+}
+
+/* Cell hover effects that can't be done in CSS-in-JS */
+.tabular-cell:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+}
+
+.tabular-cell:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+  z-index: 1;
+}

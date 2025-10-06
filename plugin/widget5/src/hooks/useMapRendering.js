@@ -90,7 +90,7 @@ export const useMapRendering = ({
     // Determine if layer is time-dimensionless
     const isTimeDimensionless = selectedLayer.isStatic || selectedLayer.id === 200;
     
-    // Prepare layers to add
+    // Prepare layers to add - handle composite layers (which already include direction overlay)
     const layersToAdd = selectedLayer.composite ? selectedLayer.layers : [selectedLayer];
 
     layersToAdd.forEach(layerConfig => {
@@ -101,16 +101,24 @@ export const useMapRendering = ({
         opacity: wmsOpacity,
         styles: layerConfig.style,
         version: '1.3.0',
-        DATASET: layerConfig.dataset || 'cook_forecast',
         crs: L.CRS.EPSG4326,
         pane: 'overlayPane',
       };
+      
+      // Add DATASET parameter only for ncWMS servers, not THREDDS
+      const isThreddsServer = layerConfig.wmsUrl && (layerConfig.wmsUrl.includes('thredds') || layerConfig.wmsUrl.includes('/api/thredds/'));
+      if (!isThreddsServer) {
+        commonOptions.DATASET = layerConfig.dataset || 'cook_forecast';
+      }
 
       // Only add time parameter for time-dimensional layers
       if (!isTimeDimensionless && currentSliderDateStr) {
         commonOptions.time = currentSliderDateStr;
       }
 
+      // Special handling for wave direction in composite layers (now uses THREDDS)
+      const isWaveDirectionLayer = layerConfig.value === 'dirm';
+      
       // Add WMS layer to map
       const wmsLayer = addWMSTileLayer(
         mapInstance.current,
@@ -118,9 +126,11 @@ export const useMapRendering = ({
         {
           ...commonOptions,
           colorscalerange: layerConfig.colorscalerange || "",
-          abovemaxcolor: layerConfig.value === 'dirm' ? "transparent" : "extend",
+          abovemaxcolor: isWaveDirectionLayer ? "transparent" : "extend",
           belowmincolor: "transparent",
           numcolorbands: layerConfig.numcolorbands || "250",
+          // Use layer-specific opacity if defined, otherwise use global opacity
+          opacity: layerConfig.opacity || wmsOpacity,
         },
         handleShow
       );

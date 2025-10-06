@@ -364,7 +364,7 @@ function BottomOffCanvas({ show, onHide, data }) {
       container={portalTarget}
       style={{
         '--bs-offcanvas-height': `${resolvedHeight}px`,
-        height: 'auto',
+        height: `${resolvedHeight}px`, // Use actual height instead of 'auto'
         top: 'auto',
         bottom: 0,
         zIndex: 12000, // ensure above map + UI chrome
@@ -372,14 +372,15 @@ function BottomOffCanvas({ show, onHide, data }) {
         backdropFilter: "blur(8px)",
         color: "#e2e8f0", // Light text color for readability
         overflow: "hidden",
-        transition: "height 0.1s",
+        transition: "height 0.2s ease-out", // Smoother transition
         borderTop: `1px solid rgba(144, 224, 239, 0.3)`, // Subtle cyan border
         left: offcanvasLeft,
         right: offcanvasRight,
         width: offcanvasWidth,
         margin: offcanvasMargin,
         maxHeight: "90vh",
-        
+        minHeight: `${MIN_HEIGHT}px`,
+        resize: 'none' // Disable default resize, we handle it with drag
       }}
       backdrop={false}
       scroll={true}
@@ -458,19 +459,41 @@ function BottomOffCanvas({ show, onHide, data }) {
           ×
         </button>
       </div>
-      <Offcanvas.Body style={{ paddingTop: 16 }}>
+      <Offcanvas.Body style={{ 
+        paddingTop: 16, 
+        height: `calc(${resolvedHeight}px - 60px)`, // Account for header height
+        overflow: 'auto',
+        display: 'flex',
+        flexDirection: 'column'
+      }}>
         {loading
           ? <div style={{ textAlign: "center", padding: "2rem" }}>Loading data...</div>
           : fetchError
               ? <div style={{ color: "red", textAlign: "center" }}>{fetchError}</div>
               : <>
-                  <div style={{ display: activeTab === 'tabular' ? 'block' : 'none' }}><Tabular perVariableData={perVariableData} /></div>
-                  <div style={{ display: activeTab === 'timeseries' ? 'block' : 'none' }}><Timeseries perVariableData={perVariableData} /></div>
+                  <div style={{ 
+                    display: activeTab === 'tabular' ? 'flex' : 'none',
+                    flex: 1,
+                    overflow: 'auto'
+                  }}>
+                    <Tabular perVariableData={perVariableData} />
+                  </div>
+                  <div style={{ 
+                    display: activeTab === 'timeseries' ? 'flex' : 'none',
+                    flex: 1,
+                    overflow: 'auto'
+                  }}>
+                    <Timeseries perVariableData={perVariableData} />
+                  </div>
                   {/*
                     Conditionally mount MapPreview ONLY when its tab is active.
                     Returning null ensures the component is fully unmounted, preventing Leaflet instance conflicts.
                   */}
-                  {activeTab === 'map' ? <MapPreview data={data} /> : null}
+                  {activeTab === 'map' ? (
+                    <div style={{ flex: 1, overflow: 'hidden' }}>
+                      <MapPreview data={data} />
+                    </div>
+                  ) : null}
                 </>
         }
       </Offcanvas.Body>

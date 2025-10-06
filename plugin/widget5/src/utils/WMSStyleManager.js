@@ -186,7 +186,7 @@ export class WMSStyleManager {
         value: upperBound,
         color: colorMapping[value],
         label: this.getWaveHeightLabel(upperBound),
-        description: this.getWaveHeightDescription(previousValue, upperBound)
+        description: this.getWaveHeightDescription(previousValue, upperBound, { dataMax: 15 })
       });
 
       previousValue = value;
@@ -211,33 +211,72 @@ export class WMSStyleManager {
   }
 
   /**
-   * Provide descriptive guidance for wave height bands
+   * Provide adaptive marine descriptions based on regional data characteristics and island-scale conditions
    * @param {number} min - Minimum height in meters
    * @param {number} max - Maximum height in meters (Infinity for open-ended)
-   * @returns {string} Tooltip-friendly description
+   * @param {Object} context - Regional context (dataMax, location, etc.)
+   * @returns {string} Context-aware marine classification
    */
-  getWaveHeightDescription(min, max) {
+  getWaveHeightDescription(min, max, context = {}) {
     const formattedRange = this.formatWaveHeightRange(min, max);
-
+    const dataMax = context.dataMax || 15; // Default to global range if unknown
+    const isIslandScale = dataMax < 3; // Tropical/protected waters
+    const isModerateScale = dataMax < 8; // Temperate/coastal waters
+    
+    // Island-scale descriptions (tropical atolls, protected waters, data max < 3m)
+    if (isIslandScale) {
+      if (max <= 0.5) {
+        return `Calm Lagoon Conditions: ${formattedRange}. Mirror-like conditions inside reef protection. Ideal for all water activities, kayaking, snorkeling. No reef breaking.`;
+      }
+      if (max <= 1) {
+        return `Light Trade Wind Seas: ${formattedRange}. Gentle swells on outer reefs. Small craft operations normal. Light surf on windward shores. Tourism activities unaffected.`;
+      }
+      if (max <= 1.5) {
+        return `Moderate Trade Conditions: ${formattedRange}. Active reef breaking on exposed coasts. Small craft may experience spray. Larger swells reach protected harbors.`;
+      }
+      if (max <= 2.5) {
+        return `Strong Trade Wind Seas: ${formattedRange}. Significant reef breaking, restricted passage through cuts. Consider delayed departure for vessels <10m. Elevated surf conditions.`;
+      }
+      return `High Island Seas: ${formattedRange}. Maximum regional wave conditions. Heavy reef breaking, dangerous passages. Port restrictions likely. Emergency response preparations.`;
+    }
+    
+    // Moderate coastal scale (temperate waters, data max 3-8m) 
+    if (isModerateScale) {
+      if (max <= 1) {
+        return `WMO Sea State 0-2: ${formattedRange}. Calm to slight coastal seas. Safe for all vessels including recreational craft. Light onshore conditions.`;
+      }
+      if (max <= 2) {
+        return `WMO Sea State 3: ${formattedRange}. Slight seas with occasional whitecaps. Normal coastal operations. Minor spray over breakwaters.`;
+      }
+      if (max <= 4) {
+        return `WMO Sea State 4: ${formattedRange}. Moderate seas, frequent whitecaps. Small craft advisory conditions. Reduced speeds recommended for pleasure craft.`;
+      }
+      if (max <= 6) {
+        return `WMO Sea State 5: ${formattedRange}. Rough coastal seas. Gale warning conditions. Restrict operations for vessels <15m LOA. Port approach difficulties.`;
+      }
+      return `WMO Sea State 6: ${formattedRange}. Very rough regional seas. Storm conditions approaching maximum for this area. Commercial traffic restrictions.`;
+    }
+    
+    // Global scale descriptions (open ocean, data max >8m)
     if (max <= 1) {
-      return `Calm = ${formattedRange}. Smooth seas; ideal for all vessels.`;
+      return `WMO Sea State 0-2: ${formattedRange}. Calm to slight seas. Wave crests smooth, no breaking. Safe for all vessel operations including small craft.`;
     }
     if (max <= 2) {
-      return `Slight = ${formattedRange}. Low swell; occasional whitecaps.`;
+      return `WMO Sea State 3: ${formattedRange}. Slight seas. Short wavelength, few whitecaps. Minor spray may affect bridge visibility on smaller vessels.`;
     }
     if (max <= 4) {
-      return `Moderate = ${formattedRange}. Many whitecaps; caution for small vessels.`;
+      return `WMO Sea State 4: ${formattedRange}. Moderate seas. Frequent whitecaps, moderate spray. Small craft advisories may be issued. Reduced speed recommended.`;
     }
     if (max <= 6) {
-      return `Rough = ${formattedRange}. Steep waves and spray; experienced crews only.`;
+      return `WMO Sea State 5: ${formattedRange}. Rough seas. Continuous whitecapping, heavy spray. Gale warning conditions. Restrict operations for vessels <20m LOA.`;
     }
     if (max <= 9) {
-      return `Very Rough = ${formattedRange}. Heavy seas; restrict small-craft operations.`;
+      return `WMO Sea State 6: ${formattedRange}. Very rough seas. Extensive foam patches, significant spray impairment. Storm warning conditions. Commercial traffic restricted.`;
     }
     if (max <= 14) {
-      return `High = ${formattedRange}. Large breaking waves; hazardous for most vessels.`;
+      return `WMO Sea State 7-8: ${formattedRange}. High to very high seas. Continuous heavy breaking, severe visibility reduction. Hurricane-force conditions. Port closures likely.`;
     }
-    return `Extreme = ${formattedRange}. Phenomenal seas; avoid marine activity.`;
+    return `WMO Sea State 9: ${formattedRange}. Phenomenal seas. Exceptional wave conditions exceeding operational design limits for most vessels. Emergency conditions.`;
   }
 
   /**

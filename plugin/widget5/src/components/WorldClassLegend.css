@@ -1,21 +1,50 @@
 /* Marine Legend Styles */
 
 .world-class-legend {
-  background: rgba(0, 0, 0, 0.9);
+  background: rgba(0, 0, 0, 0.75);
   backdrop-filter: blur(15px);
-  border: 2px solid #00d4ff;
+  border: 1px solid #00d4ff;
   border-radius: 12px;
-  padding: 1.5rem;
+  padding: 1.2rem;
   color: white;
   font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
-  box-shadow: 0 8px 32px rgba(0, 212, 255, 0.3);
-  max-width: 350px;
+  box-shadow: 0 8px 32px rgba(0, 212, 255, 0.2);
+  max-width: 200px; /* Reduced from 280px since no range descriptions */
   margin: 1rem;
+  transition: all 0.3s ease;
 }
 
 .world-class-legend.compact {
-  padding: 1rem;
-  max-width: 280px;
+  padding: 0.9rem;
+  max-width: 160px; /* Reduced from 220px */
+}
+
+.world-class-legend.micro {
+  padding: 0.6rem;
+  max-width: 120px; /* Reduced from 180px */
+  background: rgba(0, 0, 0, 0.65);
+  border-radius: 8px;
+}
+
+.world-class-legend.micro .legend-meta,
+.world-class-legend.micro .legend-footer,
+.world-class-legend.micro .legend-subtitle {
+  display: none;
+}
+
+.world-class-legend.micro .legend-title {
+  font-size: 1.1rem;
+  margin-bottom: 0.5rem;
+}
+
+.world-class-legend.micro .legend-gradient__bar {
+  width: 24px;
+  height: 120px;
+}
+
+.world-class-legend.micro .legend-range {
+  padding: 0.3rem;
+  gap: 0.5rem;
 }
 
 .legend-header {
@@ -31,7 +60,14 @@
   gap: 0.75rem;
 }
 
-.legend-toggle {
+.legend-controls {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.legend-toggle,
+.legend-size-toggle {
   border: 1px solid rgba(144, 224, 239, 0.4);
   background: rgba(8, 26, 70, 0.6);
   color: #90e0ef;
@@ -42,13 +78,23 @@
   transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
 }
 
-.legend-toggle:hover {
+.legend-size-toggle {
+  min-width: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+}
+
+.legend-toggle:hover,
+.legend-size-toggle:hover {
   background: rgba(144, 224, 239, 0.2);
   color: #ffffff;
   border-color: rgba(144, 224, 239, 0.6);
 }
 
-.legend-toggle:focus-visible {
+.legend-toggle:focus-visible,
+.legend-size-toggle:focus-visible {
   outline: 2px solid #90e0ef;
   outline-offset: 2px;
 }
@@ -100,13 +146,16 @@
 }
 
 .legend-gradient {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 0.5rem;
+  padding-right: 4rem;
 }
 
 .legend-gradient__bar {
+  position: relative;
   width: 42px;
   height: 220px;
   border-radius: 8px;
@@ -116,12 +165,43 @@
   background-repeat: no-repeat;
 }
 
+.legend-gradient__title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #e0f2ff;
+  margin-bottom: 0.5rem;
+  text-align: center;
+}
+
 .legend-gradient__scale {
-  width: 100%;
-  display: flex;
-  justify-content: space-between;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 100%;
+  width: 4rem;
   font-size: 0.75rem;
   color: #b0d4e3;
+}
+
+.legend-gradient__tick {
+  white-space: nowrap;
+  user-select: none;
+}
+
+.legend-gradient__ticks {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: -6px;
+  width: 6px;
+}
+
+.legend-gradient__tick-mark {
+  width: 4px;
+  height: 1px;
+  background-color: #e0f2ff;
+  opacity: 0.8;
+  transform: translateY(-50%);
 }
 
 .legend-ranges {
@@ -288,6 +368,11 @@
     padding: 1rem;
   }
   
+  /* Auto-switch to compact mode on tablets */
+  .world-class-legend:not(.micro) {
+    max-width: 240px;
+  }
+  
   .legend-title {
     font-size: 1.2rem;
   }
@@ -314,6 +399,28 @@
 
   .legend-gradient__scale {
     width: 100%;
+    height: 1.2rem;
+  }
+
+  .legend-gradient__title {
+    font-size: 0.75rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .legend-gradient__tick {
+    font-size: 0.65rem;
+  }
+
+  /* Mobile-optimized controls */
+  .legend-controls {
+    gap: 0.25rem;
+  }
+  
+  .legend-toggle,
+  .legend-size-toggle {
+    padding: 0.5rem;
+    min-width: 44px;
+    min-height: 44px;
   }
 }
 
@@ -321,6 +428,11 @@
   .world-class-legend {
     padding: 0.75rem;
     gap: 0.5rem;
+  }
+
+  /* Auto-switch to micro mode on mobile */
+  .world-class-legend:not(.micro) {
+    max-width: 200px;
   }
 
   .legend-title {
@@ -333,6 +445,18 @@
 
   .legend-meta {
     font-size: 0.7rem;
+  }
+
+  .legend-gradient__title {
+    font-size: 0.7rem;
+  }
+
+  .legend-gradient__tick {
+    font-size: 0.6rem;
+  }
+
+  .legend-gradient__scale {
+    height: 1rem;
   }
 
   .legend-gradient__bar {
@@ -354,6 +478,16 @@
   .legend-range__label,
   .legend-range__description {
     font-size: 0.7rem;
+  }
+
+  /* Micro mode specific mobile adjustments */
+  .world-class-legend.micro {
+    max-width: 160px;
+    padding: 0.5rem;
+  }
+
+  .world-class-legend.micro .legend-title {
+    font-size: 0.95rem;
   }
 }
 

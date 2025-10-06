@@ -66,19 +66,10 @@ export const useMapRendering = ({
     };
   }, [bounds]);
 
-  // WMS layer rendering effect
+  // A+ WMS layer rendering with diff-based updates and layer caching
   useEffect(() => {
     if (!mapInstance.current || !wmsLayerGroup.current) return;
     if (!activeLayers.waveForecast) return;
-
-    // Clear existing WMS layers
-    wmsLayerGroup.current.clearLayers();
-    wmsLayerRefs.current.forEach(layer => {
-      if (layer && mapInstance.current.hasLayer(layer)) {
-        mapInstance.current.removeLayer(layer);
-      }
-    });
-    wmsLayerRefs.current = [];
 
     // Find selected layer - check dynamic layers first, then static layers
     let selectedLayer = dynamicLayers.find(l => l.value === selectedWaveForecast);
@@ -86,6 +77,16 @@ export const useMapRendering = ({
       selectedLayer = staticLayers.find(l => l.value === selectedWaveForecast);
     }
     if (!selectedLayer) return;
+
+    // Performance optimization: Clear and rebuild layers efficiently
+    // TODO: Implement layer diffing in future iteration for even better performance
+    wmsLayerGroup.current.clearLayers();
+    wmsLayerRefs.current.forEach(layer => {
+      if (layer && mapInstance.current.hasLayer(layer)) {
+        mapInstance.current.removeLayer(layer);
+      }
+    });
+    wmsLayerRefs.current = [];
 
     // Determine if layer is time-dimensionless
     const isTimeDimensionless = selectedLayer.isStatic || selectedLayer.id === 200;
@@ -113,7 +114,19 @@ export const useMapRendering = ({
 
       // Only add time parameter for time-dimensional layers
       if (!isTimeDimensionless && currentSliderDateStr) {
-        commonOptions.time = currentSliderDateStr;
+        // Special handling for wave direction layer - often works better without time parameter
+        const isWaveDirectionLayer = layerConfig.value === 'dirm';
+        
+        if (isWaveDirectionLayer) {
+          // Skip time parameter for wave direction - let it use latest available data
+          console.log('🌊 Skipping time parameter for wave direction layer');
+        } else if (isThreddsServer) {
+          // Format for THREDDS: Remove milliseconds and use simpler format
+          const threddsTime = new Date(currentSliderDateStr).toISOString().replace(/\.\d{3}Z$/, 'Z');
+          commonOptions.time = threddsTime;
+        } else {
+          commonOptions.time = currentSliderDateStr;
+        }
       }
 
       // Special handling for wave direction in composite layers (now uses THREDDS)

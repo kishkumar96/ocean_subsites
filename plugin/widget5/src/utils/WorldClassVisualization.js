@@ -423,7 +423,7 @@ class WorldClassVisualization {
           zIndex: 2,
           opacity: 0.9,
           // THREDDS-specific config (no dataset parameter needed)
-          description: "Wave direction arrows from THREDDS server"
+          description: "Wave direction arrows from THREDDS server (direct access with CORS layer)"
         }
       ]
     };

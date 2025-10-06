@@ -11,6 +11,28 @@ import useMapContainerRect from "../hooks/useMapContainerRect";
 const FORECAST_VARIABLE_KEYS = ['hs', 'tm02', 'tpeak', 'dirm'];
 
 // ---- Centralized fetching helpers ----
+// Helper function to determine which WMS server to use for each variable
+function getServerConfigForVariable(layer) {
+  // Extract variable name from layer (handles both 'cook_forecast/dirm' and 'dirm' formats)
+  const variable = layer.includes('/') ? layer.split('/')[1] : layer;
+  
+  // Wave direction should use THREDDS server to match map visualization
+  if (variable === 'dirm') {
+    return {
+      url: 'https://gemthreddshpc.spc.int/thredds/wms/POP/model/country/spc/forecast/hourly/COK/Rarotonga_UGRID.nc',
+      layerName: 'dirm', // THREDDS uses simple layer name without dataset prefix
+      serverType: 'thredds'
+    };
+  }
+  
+  // All other variables use ncWMS server
+  return {
+    url: 'https://gem-ncwms-hpc.spc.int/ncWMS/wms',
+    layerName: layer, // ncWMS uses full layer path like 'cook_forecast/hs'
+    serverType: 'ncwms'
+  };
+}
+
 async function fetchLayerTimeseries(layer, data) {
   if (!data || !data.bbox || (data.x === undefined && data.i === undefined) || (data.y === undefined && data.j === undefined)) return null;
   
@@ -64,13 +86,16 @@ async function fetchLayerTimeseries(layer, data) {
   const width = data.width || 256;
   const height = data.height || 256;
   
-  // Use proper ncWMS GetTimeseries format (same as GetFeatureInfo)
+  // Get appropriate server configuration for this variable
+  const serverConfig = getServerConfigForVariable(layer);
+  
+  // Build GetTimeseries URL using the appropriate server and layer name
   const url =
-    "https://gem-ncwms-hpc.spc.int/ncWMS/wms" +
+    serverConfig.url +
     `?REQUEST=GetTimeseries` +
     `&VERSION=1.3.0` + // Required parameter
-    `&LAYERS=${layer}` +
-    `&QUERY_LAYERS=${layer}` +
+    `&LAYERS=${serverConfig.layerName}` +
+    `&QUERY_LAYERS=${serverConfig.layerName}` +
     `&BBOX=${data.bbox}` +
     `&CRS=EPSG:4326` +
     `&HEIGHT=${height}` +
@@ -80,7 +105,7 @@ async function fetchLayerTimeseries(layer, data) {
     `&TIME=${encodeURIComponent(timeParam)}` +
     `&INFO_FORMAT=text/csv`; // CSV format works better than JSON for timeseries
     
-  console.log('🌊 Fetching real timeseries:', url);
+  console.log(`🌊 Fetching timeseries for ${layer} using ${serverConfig.serverType.toUpperCase()} server:`, url);
   
   try {
     const response = await fetch(url);
@@ -278,7 +303,13 @@ function BottomOffCanvas({ show, onHide, data }) {
       });
 
       const layersToFetch = [];
-      if (shouldFetchVariableFamily && data.bbox) {
+      
+      // Special handling for composite layer - fetch both wave height and direction
+      if (layerName === 'world_class_composite_hs_dirm' && data.bbox) {
+        console.log('🌊 Detected composite layer, fetching both hs and dirm');
+        layersToFetch.push('cook_forecast/hs');  // Wave height from ncWMS
+        layersToFetch.push('dirm');              // Direction from THREDDS (will be handled by getServerConfigForVariable)
+      } else if (shouldFetchVariableFamily && data.bbox) {
         availableVariables.forEach(variable => {
           layersToFetch.push(`${datasetName}/${variable}`);
         });
@@ -287,6 +318,7 @@ function BottomOffCanvas({ show, onHide, data }) {
       }
 
       const uniqueLayers = Array.from(new Set(layersToFetch));
+      console.log('🎯 Layers to fetch:', uniqueLayers);
 
       if (data.bbox && uniqueLayers.length > 0) {
         const fetchPromises = uniqueLayers.map(async layerId => {
@@ -294,7 +326,7 @@ function BottomOffCanvas({ show, onHide, data }) {
           try {
             console.log('🚀 Fetching timeseries for:', { layerId, key });
             const layerData = await fetchLayerTimeseries(layerId, data);
-            console.log('📦 Received layerData:', { layerId, hasCoverage: !!(layerData && layerData.coverage) });
+            console.log('📦 Received layerData:', { layerId, key, hasCoverage: !!(layerData && layerData.coverage) });
 
             if (layerData && layerData.coverage) {
               out[key] = layerData.coverage;

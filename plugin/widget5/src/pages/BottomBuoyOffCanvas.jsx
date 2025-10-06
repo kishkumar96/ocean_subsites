@@ -423,8 +423,9 @@ function BottomBuoyOffCanvas({ show, onHide, buoyId }) {
         setLoading(false);
         setHasLoadedData(prev => ({ ...prev, buoy: true }));
       })
-      .catch(e => {
-       setFetchError("Failed to fetch buoy data");
+      .catch(error => {
+        console.error('Buoy data fetch error:', error);
+        setFetchError("Failed to fetch buoy data");
         setLoading(false);
         setHasLoadedData(prev => ({ ...prev, buoy: false }));
       });

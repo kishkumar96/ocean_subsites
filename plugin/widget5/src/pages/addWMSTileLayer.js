@@ -92,11 +92,12 @@ const addWMSTileLayer = (map, url, options = {}, handleShow) => {
     // For ncWMS servers, we need to create a custom WMS layer that handles the coordinate transformation
     let wmsLayer;
     
-    // Use CORS-enabled layer for THREDDS servers
+    // Use CORS-enabled layer for THREDDS servers (direct access)
     if (url.includes('thredds')) {
+      // THREDDS server requires CORS handling
       wmsLayer = createCORSWMSLayer(url, finalOptions);
     } else {
-      // For non-ncWMS servers, use the standard WMS layer
+      // Standard WMS layer for ncWMS servers
       wmsLayer = L.tileLayer.wms(url, finalOptions);
     }
     

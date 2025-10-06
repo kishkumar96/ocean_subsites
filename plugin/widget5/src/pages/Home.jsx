@@ -113,7 +113,7 @@ function CookIslandsForecast() {
 
 
       {
-        label: "⏱️ Mean Wave Period",
+        label: "Mean Wave Period",
         value: "cook_forecast/tm02",
         ...getWorldClassConfig('tm02'),
         id: 4,
@@ -122,7 +122,7 @@ function CookIslandsForecast() {
         description: "ENHANCED Divergent Spectral palette - maximum visual distinction for wave period analysis with full spectrum color differentiation"
       },
       {
-        label: "🏔️ Peak Wave Period",
+        label: "Peak Wave Period",
         value: "cook_forecast/tpeak", 
         ...getWorldClassConfig('tpeak'),
         id: 5,

@@ -24,14 +24,15 @@ export const ControlGroup = ({
 );
 
 /**
- * Variable Selection Buttons
+ * Variable Selection Buttons with Fancy Icons
  */
 export const VariableButtons = ({ 
   layers, 
   selectedValue, 
   onVariableChange, 
   labelMap = {},
-  ariaLabel = "Select forecast variable"
+  ariaLabel = "Select forecast variable",
+  getVariableIcon = null
 }) => {
   const getShortLabel = (label) => labelMap[label] || label;
   
@@ -47,6 +48,7 @@ export const VariableButtons = ({
           aria-checked={selectedValue === layer.value}
           aria-label={`${getShortLabel(layer.label)} forecast variable`}
         >
+          {getVariableIcon && getVariableIcon(layer)}
           {getShortLabel(layer.label)}
         </button>
       ))}
@@ -97,7 +99,7 @@ export const TimeControl = ({
           disabled={capTime.loading}
           aria-label={isPlaying ? 'Pause forecast animation' : 'Play forecast animation'}
         >
-          <span>{isPlaying ? `${pauseIcon} Pause` : `${playIcon} Play`}</span>
+          <span>{isPlaying ? <>{pauseIcon} Pause</> : <>{playIcon} Play</>}</span>
         </button>
       </div>
     </div>

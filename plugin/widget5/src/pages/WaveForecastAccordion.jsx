@@ -1,10 +1,13 @@
 import React from "react";
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
-import { FaPlay, FaPause, FaForward, FaBackward } from "react-icons/fa";
+import { FaPlay, FaPause } from "react-icons/fa";
+import { Waves, Wind, Navigation, Eye, BarChart3, Settings, Info } from "lucide-react";
 import Badge from 'react-bootstrap/Badge';
+import FancyIcon from '../components/FancyIcon';
 import './timeseries_scroll.css';
 import './opacity.css';
+import '../styles/fancyIcons.css';
 
 const sideLabelStyle = {
   width: 54,
@@ -97,9 +100,18 @@ export default function WaveForecastAccordion({
 
   return (
     <div style={{ fontSize: "14px", width: "100%", maxWidth: 370, margin: "0 auto" }}>
-      {/* Layer select */}
+      {/* Layer select with fancy icon */}
       <div style={sliderRowStyle}>
-        <label style={sideLabelStyle} htmlFor="select-wave-forecast">Layer</label>
+        <label style={{...sideLabelStyle, display: "flex", alignItems: "center", gap: 4}} htmlFor="select-wave-forecast">
+          <FancyIcon 
+            Icon={Waves} 
+            size={16} 
+            animation="wave" 
+            color="#00cc11ff"
+            glowColor="rgba(9, 238, 28, 0.3)"
+          />
+          Layer
+        </label>
         <select
           id="select-wave-forecast"
           className="form-select form-select-sm"
@@ -116,9 +128,17 @@ export default function WaveForecastAccordion({
         </select>
       </div>
 
-      {/* Opacity slider */}
+      {/* Opacity slider with fancy icon */}
       <div style={sliderRowStyle}>
-        <label style={sideLabelStyle} htmlFor="wave-opacity-slider">Opacity</label>
+        <label style={{...sideLabelStyle, display: "flex", alignItems: "center", gap: 4}} htmlFor="wave-opacity-slider">
+          <FancyIcon 
+            Icon={Eye} 
+            size={16} 
+            animation="pulse" 
+            color="#6c757d"
+          />
+          Opacity
+        </label>
         <input
           type="range"
           id="wave-opacity-slider"
@@ -133,9 +153,17 @@ export default function WaveForecastAccordion({
         <span style={valueText}>{Math.round(opacity * 100)}%</span>
       </div>
 
-      {/* Time range slider */}
+      {/* Time range slider with fancy icon */}
       <div style={sliderRowStyle}>
-        <label style={sideLabelStyle} htmlFor="wave-time-slider">Time</label>
+        <label style={{...sideLabelStyle, display: "flex", alignItems: "center", gap: 4}} htmlFor="wave-time-slider">
+          <FancyIcon 
+            Icon={BarChart3} 
+            size={16} 
+            animation="shimmer" 
+            color="#28a745"
+          />
+          Time
+        </label>
         <input
           type="range"
           className="form-range custom-range-slider2"
@@ -157,28 +185,42 @@ export default function WaveForecastAccordion({
             size="sm"
             onClick={() => setSliderIndex(prev => prev > 0 ? prev - 1 : totalSteps)}
             title="Previous"
-            style={{ padding: "0.05rem 0.3rem", fontSize: "1.02em", height: 20, minHeight: 20, display: "flex", alignItems: "center", justifyContent: "center" }}
+            style={{ padding: "0.05rem 0.3rem", fontSize: "1.02em", height: 20, minHeight: 20, display: "flex", alignItems: "center", justifyContent: "center", border: "none" }}
           >
-            <FaBackward size={8}/>
+            <FancyIcon 
+              Icon={Navigation} 
+              size={10} 
+              animation="bounce" 
+              color="#6c757d"
+              className="rotate-180"
+            />
           </Button>
           <Button
             variant={isPlaying ? "danger" : "success"}
             size="sm"
             onClick={() => setIsPlaying((p) => !p)}
             title={isPlaying ? "Pause" : "Play"}
-            style={{ padding: "0.05rem 0.3rem", height: 20, minHeight: 20, display: "flex", alignItems: "center", justifyContent: "center" }}
+            style={{ padding: "0.05rem 0.3rem", height: 20, minHeight: 20, display: "flex", alignItems: "center", justifyContent: "center", border: "none" }}
             disabled={capTime.loading}
           >
-            {isPlaying ? <FaPause size={8}/> : <FaPlay size={8}/>}
+            {isPlaying ? 
+              <FancyIcon Icon={FaPause} size={10} animation="pulse" color="white" /> : 
+              <FancyIcon Icon={FaPlay} size={10} animation="hover" color="white" />
+            }
           </Button>
           <Button
             variant="outline-secondary"
             size="sm"
             onClick={() => setSliderIndex(prev => prev < totalSteps ? prev + 1 : 0)}
             title="Next"
-            style={{ padding: "0.05rem 0.3rem", fontSize: "1.02em", height: 20, minHeight: 20, display: "flex", alignItems: "center", justifyContent: "center" }}
+            style={{ padding: "0.05rem 0.3rem", fontSize: "1.02em", height: 20, minHeight: 20, display: "flex", alignItems: "center", justifyContent: "center", border: "none" }}
           >
-            <FaForward size={8}/>
+            <FancyIcon 
+              Icon={Navigation} 
+              size={10} 
+              animation="bounce" 
+              color="#6c757d"
+            />
           </Button>
         </ButtonGroup>
       </div>

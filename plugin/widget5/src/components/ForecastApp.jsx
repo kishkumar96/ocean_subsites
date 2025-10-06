@@ -11,6 +11,9 @@ import {
   StatusBar 
 } from './shared/UIComponents';
 import wmsStyleManager from '../utils/WMSStyleManager';
+import { Waves, Wind, Navigation, Activity, Info, Settings, Timer, Triangle,  BadgeInfo , CloudRain, FastForward} from 'lucide-react';
+import FancyIcon from './FancyIcon';
+import '../styles/fancyIcons.css';
 
 const EPSILON = 1e-6;
 
@@ -440,6 +443,34 @@ const ForecastApp = ({
   
   const layerMetadata = getLayerMetadata(selectedLayer);
 
+  // Function to get fancy icons for different variable types
+  const getVariableIcon = (layer) => {
+    const value = layer.value?.toLowerCase() || '';
+    const label = layer.label?.toLowerCase() || '';
+    
+    if (value.includes('hs') || label.includes('wave height')) {
+      return <FancyIcon icon={Waves} animationType="wave" size={14} color="#00bcd4" style={{ marginRight: '8px' }} />;
+    }
+    if (value.includes('tm02') || (label.includes('mean') && label.includes('period'))) {
+      return <FancyIcon icon={Timer} animationType="pulse" size={14} color="#ff9800" style={{ marginRight: '8px' }} />;
+    }
+    if (value.includes('tpeak') || (label.includes('peak') && label.includes('period'))) {
+      return <FancyIcon icon={Triangle} animationType="bounce" size={14} color="#4caf50" style={{ marginRight: '8px' }} />;
+    }
+    if (value.includes('dirm') || label.includes('direction')) {
+      return <FancyIcon icon={Navigation} animationType="spin" size={14} color="#9c27b0" style={{ marginRight: '8px' }} />;
+    }
+    if (value.includes('inun') || label.includes('inundation')) {
+      return <FancyIcon icon={CloudRain} animationType="shimmer" size={14} color="#2196f3" style={{ marginRight: '8px' }} />;
+    }
+    if (value.includes('wind') || label.includes('wind')) {
+      return <FancyIcon icon={Wind} animationType="wave" size={14} color="#795548" style={{ marginRight: '8px' }} />;
+    }
+    
+    // Default icon for unknown variables
+    return <FancyIcon icon={Activity} animationType="pulse" size={14} color="#607d8b" style={{ marginRight: '8px' }} />;
+  };
+
   // Effect to handle initial composite layer selection.
 
 
@@ -519,13 +550,25 @@ const ForecastApp = ({
             title={metadataVisible ? "Hide Range Info" : "Show Range Info"}
             aria-label={metadataVisible ? "Hide Range Info" : "Show Range Info"}
           >
-            {metadataVisible ? "📊 Hide" : "📊 Info"}
+            <FancyIcon 
+              icon={BadgeInfo} 
+              animationType="pulse" 
+              size={16} 
+              color="#00bcd4" 
+            />
+            {metadataVisible ? " Hide" : " Info"}
           </button>
           
           {metadataVisible && selectedLayer && metadataRanges.length > 0 && (
             <div className="range-metadata-panel">
               <h4>
-                🌊 {selectedLayer.label || 'Wave Data'}
+                <FancyIcon 
+                  icon={Waves} 
+                  animationType="wave" 
+                  size={18} 
+                  color="#00bcd4" 
+                />
+                {selectedLayer.label || 'Wave Data'}
                 <span className="wmo-code">({layerMetadata.wmoCode})</span>
               </h4>
               
@@ -571,7 +614,13 @@ const ForecastApp = ({
                   title={detailedMetadataVisible ? "Hide Technical Details" : "Show Technical Details"}
                   aria-label={detailedMetadataVisible ? "Hide Technical Details" : "Show Technical Details"}
                 >
-                  {detailedMetadataVisible ? "⚙️ Less" : "⚙️ Details"}
+                  <FancyIcon 
+                    icon={Settings} 
+                    animationType="spin" 
+                    size={14} 
+                    color="#9c27b0" 
+                  />
+                  {detailedMetadataVisible ? " Less" : " Details"}
                 </button>
                 
                 {detailedMetadataVisible && (
@@ -633,7 +682,7 @@ const ForecastApp = ({
         <div className="controls-panel">
           <div className="forecast-controls">
         <ControlGroup
-          icon={UI_CONFIG.SECTIONS.FORECAST_VARIABLES.icon}
+          icon={<FancyIcon icon={Activity} animationType="shimmer" color="#00bcd4" />}
           title={UI_CONFIG.SECTIONS.FORECAST_VARIABLES.title}
           ariaLabel={UI_CONFIG.SECTIONS.FORECAST_VARIABLES.ariaLabel}
         >
@@ -643,11 +692,12 @@ const ForecastApp = ({
             onVariableChange={handleVariableChange}
             labelMap={UI_CONFIG.VARIABLE_LABELS}
             ariaLabel={UI_CONFIG.ARIA_LABELS.variableButton}
+            getVariableIcon={getVariableIcon}
           />
         </ControlGroup>
 
         <ControlGroup
-          icon={UI_CONFIG.SECTIONS.FORECAST_TIME.icon}
+          icon={<FancyIcon icon={FastForward} animationType="bounce" color="#ff9800" />}
           title={UI_CONFIG.SECTIONS.FORECAST_TIME.title}
           ariaLabel={UI_CONFIG.SECTIONS.FORECAST_TIME.ariaLabel}
         >
@@ -661,13 +711,13 @@ const ForecastApp = ({
             onPlayToggle={handlePlayToggle}
             formatDateTime={formatDateTime}
             stepHours={capTime.stepHours || 1}
-            playIcon={UI_CONFIG.PLAYBACK.PLAY.icon}
-            pauseIcon={UI_CONFIG.PLAYBACK.PAUSE.icon}
+            playIcon={<FancyIcon icon={Navigation} animationType="bounce" size={16} color="#4caf50" />}
+            pauseIcon={<FancyIcon icon={Activity} animationType="pulse" size={16} color="#ff5722" />}
           />
         </ControlGroup>
 
         <ControlGroup
-          icon={UI_CONFIG.SECTIONS.DISPLAY_OPTIONS.icon}
+          icon={<FancyIcon icon={Settings} animationType="spin" color="#9c27b0" />}
           title={UI_CONFIG.SECTIONS.DISPLAY_OPTIONS.title}
           ariaLabel={UI_CONFIG.SECTIONS.DISPLAY_OPTIONS.ariaLabel}
         >
@@ -680,7 +730,7 @@ const ForecastApp = ({
         </ControlGroup>
 
         <ControlGroup
-          icon={UI_CONFIG.SECTIONS.DATA_INFO.icon}
+          icon={<FancyIcon icon={Info} animationType="pulse" color="#2196f3" />}
           title={UI_CONFIG.SECTIONS.DATA_INFO.title}
           ariaLabel={UI_CONFIG.SECTIONS.DATA_INFO.ariaLabel}
         >

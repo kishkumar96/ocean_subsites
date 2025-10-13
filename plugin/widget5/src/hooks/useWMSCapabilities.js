@@ -331,7 +331,7 @@ const enforceSevenDayWindow = (timestamps, fallbackStart, end) => {
   const trimmed = timestamps.filter((timestamp) => timestamp >= minAllowed);
 
   if (trimmed.length === 0) {
-    return { start: fallbackStart, timestamps };
+    return { start: fallbackStart, timestamps: [] };
   }
 
   const adjustedStart = trimmed[0];

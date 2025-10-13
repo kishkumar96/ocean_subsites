@@ -250,7 +250,7 @@ const parseTimeDimensionFromCapabilities = (xml, layerName) => {
 
 const getTimeRangeFromDimension = (timeDimString) => {
   if (!timeDimString) return null;
-  
+
   try {
     // Handle comma-separated individual timestamps
     if (timeDimString.includes(',')) {
@@ -259,17 +259,25 @@ const getTimeRangeFromDimension = (timeDimString) => {
         .map(t => new Date(t))
         .filter(d => !isNaN(d.getTime()))
         .sort((a, b) => a.getTime() - b.getTime());
-      
+
       if (validTimestamps.length > 0) {
+        const end = validTimestamps[validTimestamps.length - 1];
+        const { start: adjustedStart, timestamps: trimmedTimestamps } = enforceSevenDayWindow(
+          validTimestamps,
+          validTimestamps[0],
+          end
+        );
+
         return {
-          start: validTimestamps[0],
-          end: validTimestamps[validTimestamps.length - 1],
+          start: adjustedStart,
+          end,
           step: 'PT1H', // Default step
-          availableTimestamps: validTimestamps
+          stepHours: 1,
+          availableTimestamps: trimmedTimestamps
         };
       }
     }
-    
+
     // Handle range format (start/end/step)
     if (timeDimString.includes('/')) {
       const parts = timeDimString.split('/');
@@ -283,7 +291,7 @@ const getTimeRangeFromDimension = (timeDimString) => {
           const stepHours = getStepHours(step);
           const availableTimestamps = [];
           let current = new Date(start);
-          
+
           console.log(`🌊 Generating 6-hour timestamps from ${start.toISOString()} to ${end.toISOString()}, step: ${stepHours}h`);
           
           while (current <= end) {
@@ -293,16 +301,48 @@ const getTimeRangeFromDimension = (timeDimString) => {
           
           console.log(`🌊 Generated ${availableTimestamps.length} available timestamps (6-hour intervals)`);
           
-          return { start, end, step, stepHours, availableTimestamps };
+          const { start: adjustedStart, timestamps: trimmedTimestamps } = enforceSevenDayWindow(
+            availableTimestamps,
+            start,
+            end
+          );
+
+          return { start: adjustedStart, end, step, stepHours, availableTimestamps: trimmedTimestamps };
         }
       }
     }
-    
+
     return null;
   } catch (error) {
     console.error("Error parsing time range:", error);
     return null;
   }
+};
+
+const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+
+const enforceSevenDayWindow = (timestamps, fallbackStart, end) => {
+  if (!timestamps || timestamps.length === 0) {
+    return { start: fallbackStart, timestamps: [] };
+  }
+
+  const referenceEnd = end || timestamps[timestamps.length - 1];
+  const minAllowed = new Date(referenceEnd.getTime() - SEVEN_DAYS_MS);
+  const trimmed = timestamps.filter((timestamp) => timestamp >= minAllowed);
+
+  if (trimmed.length === 0) {
+    return { start: fallbackStart, timestamps };
+  }
+
+  const adjustedStart = trimmed[0];
+
+  if (fallbackStart && adjustedStart.getTime() !== fallbackStart.getTime()) {
+    console.log(
+      `🧹 Adjusted time range start from ${fallbackStart.toISOString()} to ${adjustedStart.toISOString()} (7-day window)`
+    );
+  }
+
+  return { start: adjustedStart, timestamps: trimmed };
 };
 
 const getStepHours = (stepString) => {

@@ -413,9 +413,17 @@ function CookIslandsForecast() {
         if (!timeDim) throw new Error("No time dimension found in capabilities.");
         const { start, end, step } = getTimeRangeFromDimension(timeDim) || {};
         const stepHours = getStepHours(step || "PT1H");
+        const sanitizedStart = end
+          ? new Date(
+              Math.max(
+                start ? start.getTime() : -Infinity,
+                end.getTime() - 7 * 24 * 60 * 60 * 1000
+              )
+            )
+          : start;
         setCapTime({
           loading: false,
-          start,
+          start: sanitizedStart,
           end,
           stepHours
         });

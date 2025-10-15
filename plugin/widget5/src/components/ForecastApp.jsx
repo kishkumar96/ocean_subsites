@@ -1,14 +1,17 @@
 import React, { useMemo, useState } from 'react';
 import './ForecastApp.css';
+import '../styles/MapMarker.css';
 import useMapInteraction from '../hooks/useMapInteraction';
 import UI_CONFIG from '../config/uiConfig';
+import { MARINE_CONFIG } from '../config/marineVariables';
+import CompassRose from './CompassRose';
 import { 
   ControlGroup, 
   VariableButtons, 
   TimeControl, 
   OpacityControl, 
   DataInfo, 
-  StatusBar 
+  //StatusBar 
 } from './shared/UIComponents';
 import wmsStyleManager from '../utils/WMSStyleManager';
 import { Waves, Wind, Navigation, Activity, Info, Settings, Timer, Triangle,  BadgeInfo , CloudRain, FastForward} from 'lucide-react';
@@ -16,6 +19,53 @@ import FancyIcon from './FancyIcon';
 import '../styles/fancyIcons.css';
 
 const EPSILON = 1e-6;
+
+/**
+ * Determines the appropriate icon for a layer based on its properties
+ * Matches the icons used in the variable buttons for consistency
+ * @param {Object} layer - The layer object
+ * @returns {Object} Icon component and color
+ */
+const getLayerIcon = (layer) => {
+  if (!layer) return { icon: Waves, color: '#00bcd4' };
+  
+  const layerName = layer.value?.toLowerCase() || '';
+  const layerLabel = layer.label?.toLowerCase() || '';
+  
+  // Inundation layers
+  if (layerName.includes('inun') || layerLabel.includes('inundation')) {
+    return { icon: CloudRain, color: '#2196f3' }; // Blue (matches button)
+  }
+  
+  // Wave height layers
+  if (layerName.includes('hs') || layerLabel.includes('wave height')) {
+    return { icon: Waves, color: '#00bcd4' }; // Cyan (matches button)
+  }
+  
+  // Mean wave period (tm02)
+  if (layerName.includes('tm02') || (layerLabel.includes('mean') && layerLabel.includes('period'))) {
+    return { icon: Timer, color: '#ff9800' }; // Orange (matches button)
+  }
+  
+  // Peak wave period (tpeak)
+  if (layerName.includes('tpeak') || (layerLabel.includes('peak') && layerLabel.includes('period'))) {
+    return { icon: Triangle, color: '#4caf50' }; // Green (matches button)
+  }
+  
+  // Wave direction layers
+  if (layerName.includes('dirm') || layerLabel.includes('direction')) {
+    return { icon: Navigation, color: '#9c27b0' }; // Purple (matches button)
+  }
+  
+  // Wind layers
+  if (layerName.includes('wind') || layerLabel.includes('wind')) {
+    return { icon: Wind, color: '#795548' }; // Brown (matches button)
+  }
+  
+  // Default to activity icon
+  return { icon: Activity, color: '#607d8b' }; // Grey for unknown
+};
+
 
 const MEAN_PERIOD_METADATA = [
   { min: 0, max: 6, label: 'Wind Waves', value: '0–6 s', description: 'Locally generated wind waves with short periods', color: '#D53E4F' },
@@ -73,7 +123,8 @@ const ForecastApp = ({
   setBottomCanvasData,
   setShowBottomCanvas,
   isUpdatingVisualization,
-  currentSliderDateStr
+  currentSliderDateStr,
+  minIndex
 }) => {
   const [metadataVisible, setMetadataVisible] = useState(false); // Metadata panel state
   const [detailedMetadataVisible, setDetailedMetadataVisible] = useState(false); // Detailed metadata state
@@ -514,6 +565,15 @@ const ForecastApp = ({
       <div className="main-container">
         <div className="map-section">
           <div ref={mapRef} id="map" className="forecast-map"></div>
+          
+          {/* Enhanced Professional Compass Rose */}
+          <CompassRose 
+            position="top-right" 
+            size={90} 
+            responsive={true}
+            mapRotation={0} 
+          />
+          
           {selectedLegendLayer && (
             <div className="marine-legend">
               {(() => {
@@ -529,11 +589,23 @@ const ForecastApp = ({
                         style={{ background: legendConfig.gradient }}
                       />
                       <div className="marine-legend-scale">
-                        {legendConfig.ticks.slice().reverse().map((tick) => (
-                          <div key={`tick-${tick}`} className="marine-legend-tick">
-                            {tick}{legendConfig.units}
-                          </div>
-                        ))}
+                        {legendConfig.ticks.slice().reverse().map((tick, index) => {
+                          // Calculate position for each tick - evenly distribute from top (0%) to bottom (100%)
+                          const position = (index / (legendConfig.ticks.length - 1)) * 100;
+                          return (
+                            <div 
+                              key={`tick-${tick}`} 
+                              className="marine-legend-tick"
+                              style={{
+                                top: `${position}%`,
+                                transform: 'translateY(-50%)', // Center the tick on its position
+                                left: '0px'
+                              }}
+                            >
+                              {tick}{legendConfig.units}
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   </>
@@ -563,10 +635,10 @@ const ForecastApp = ({
             <div className="range-metadata-panel">
               <h4>
                 <FancyIcon 
-                  icon={Waves} 
+                  icon={getLayerIcon(selectedLayer).icon} 
                   animationType="wave" 
                   size={18} 
-                  color="#00bcd4" 
+                  color={getLayerIcon(selectedLayer).color} 
                 />
                 {selectedLayer.label || 'Wave Data'}
                 <span className="wmo-code">({layerMetadata.wmoCode})</span>
@@ -713,7 +785,29 @@ const ForecastApp = ({
             stepHours={capTime.stepHours || 1}
             playIcon={<FancyIcon icon={Navigation} animationType="bounce" size={16} color="#4caf50" />}
             pauseIcon={<FancyIcon icon={Activity} animationType="pulse" size={16} color="#ff5722" />}
+            minIndex={minIndex}
           />
+          
+          {/* ✅ Warm-up Period Notice */}
+          {MARINE_CONFIG.SHOW_WARMUP_NOTICE && capTime.warmupSkipped && (
+            <div style={{
+              marginTop: '0.75rem',
+              padding: '0.5rem 0.75rem',
+              background: 'rgba(33, 150, 243, 0.1)',
+              border: '1px solid rgba(33, 150, 243, 0.3)',
+              borderRadius: '6px',
+              fontSize: '0.85rem',
+              color: '#90caf9',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem'
+            }}>
+              <FancyIcon icon={BadgeInfo} animationType="pulse" size={16} color="#2196f3" />
+              <span>
+                Showing reliable forecast data (excluding {capTime.warmupDays}-day model initialization)
+              </span>
+            </div>
+          )}
         </ControlGroup>
 
         <ControlGroup
@@ -745,7 +839,7 @@ const ForecastApp = ({
           </div>
         </div>
 
-        <StatusBar copyright={UI_CONFIG.FOOTER.copyright} />
+        
       </div>
     </div>
   );

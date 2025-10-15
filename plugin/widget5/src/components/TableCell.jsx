@@ -4,12 +4,11 @@
 import React, { useMemo } from 'react';
 import ArrowSVG from './ArrowSVG.jsx';
 import { getColorFunction, isColorDark } from '../utils/colorSchemes.js';
-import { getSeaState, getCompassDirection, formatSmart, getWavePeriodClass, getPeakPeriodClass } from '../utils/marineDataUtils.js';
+import { formatSmart } from '../utils/marineDataUtils.js';
 
 const TableCell = React.memo(({ 
   value, 
   config, 
-  rowKey, 
   isDarkMode,
   style: baseStyle,
   className 
@@ -37,181 +36,52 @@ const TableCell = React.memo(({
     return style;
   }, [value, min, max, type, baseStyle]);
 
-  // Memoize tooltip content
+  // Simplified tooltip - just value and units
   const tooltipContent = useMemo(() => {
-    const isDirection = type === "dir";
-    const isWaveHeight = rowKey === "hs";
-    const isMeanPeriod = rowKey === "tm02";
-    const isPeakPeriod = rowKey === "tpeak";
-    
     if (!value || typeof value !== "number" || !isFinite(value)) {
       return "No data available";
     }
     
-    if (isDirection) {
-      const compass = getCompassDirection(value);
-      return `${value}° ${compass} - Wave direction from ${compass}`;
-    }
-    
-    if (isWaveHeight) {
-      const seaState = getSeaState(value);
-      return `${formatSmart(value, decimalPlaces)}${units} - ${seaState.state}: ${seaState.description}`;
-    }
-    
-    if (isMeanPeriod) {
-      const periodClass = getWavePeriodClass(value);
-      return `${formatSmart(value, decimalPlaces)}${units} - ${periodClass.state}: ${periodClass.description}`;
-    }
-    
-    if (isPeakPeriod) {
-      const periodClass = getPeakPeriodClass(value);
-      return `${formatSmart(value, decimalPlaces)}${units} - ${periodClass.state}: ${periodClass.description}`;
-    }
-    
     return `${formatSmart(value, decimalPlaces)}${units}`;
-  }, [value, type, rowKey, decimalPlaces, units]);
+  }, [value, decimalPlaces, units]);
 
-  // Memoize cell content rendering
+  // Simplified cell content - no descriptions, just values and arrows
   const cellContent = useMemo(() => {
     const isDirection = type === "dir";
-    const isWaveHeight = rowKey === "hs";
-    const isMeanPeriod = rowKey === "tm02";
-    const isPeakPeriod = rowKey === "tpeak";
     
     if (!value || typeof value !== "number" || !isFinite(value)) {
       return <span aria-label="No data">—</span>;
     }
 
     if (isDirection) {
-      const compassDirection = getCompassDirection(value);
+      // Direction cells show only arrow (no text label)
       return (
         <div 
           style={{ 
             display: 'flex', 
-            flexDirection: 'column', 
             alignItems: 'center', 
-            lineHeight: 1,
-            gap: '2px'
+            justifyContent: 'center',
+            lineHeight: 1
           }}
           role="img"
-          aria-label={`Direction: ${value}° ${compassDirection}`}
+          aria-label={`Direction: ${value}°`}
         >
           <ArrowSVG 
             angle={value + 180} 
             isDarkMode={isDarkMode} 
-            compassDirection={compassDirection}
             size={20}
           />
-          <small 
-            style={{ 
-              fontSize: '0.7em', 
-              fontWeight: 'bold',
-              textShadow: isDarkMode ? '1px 1px 2px rgba(0,0,0,0.8)' : '1px 1px 2px rgba(255,255,255,0.8)'
-            }}
-            aria-hidden="true"
-          >
-            {compassDirection}
-          </small>
         </div>
       );
     }
 
-    if (isWaveHeight) {
-      const seaState = getSeaState(value);
-      return (
-        <div 
-          style={{ 
-            display: 'flex', 
-            flexDirection: 'column', 
-            alignItems: 'center', 
-            lineHeight: 1,
-            gap: '1px'
-          }}
-        >
-          <span style={{ fontWeight: 'bold' }}>
-            {formatSmart(value, decimalPlaces)}
-          </span>
-          <small 
-            style={{ 
-              fontSize: '0.65em', 
-              opacity: 0.9,
-              fontWeight: '500',
-              textShadow: isDarkMode ? '1px 1px 2px rgba(0,0,0,0.6)' : '1px 1px 2px rgba(255,255,255,0.6)'
-            }}
-            aria-label={`Sea state: ${seaState.state}`}
-          >
-            {seaState.state}
-          </small>
-        </div>
-      );
-    }
-
-    if (isMeanPeriod) {
-      const periodClass = getWavePeriodClass(value);
-      return (
-        <div 
-          style={{ 
-            display: 'flex', 
-            flexDirection: 'column', 
-            alignItems: 'center', 
-            lineHeight: 1,
-            gap: '1px'
-          }}
-        >
-          <span style={{ fontWeight: 'bold' }}>
-            {formatSmart(value, decimalPlaces)}
-          </span>
-          <small 
-            style={{ 
-              fontSize: '0.65em', 
-              opacity: 0.9,
-              fontWeight: '500',
-              textShadow: isDarkMode ? '1px 1px 2px rgba(0,0,0,0.6)' : '1px 1px 2px rgba(255,255,255,0.6)'
-            }}
-            aria-label={`Wave period: ${periodClass.state}`}
-          >
-            {periodClass.state}
-          </small>
-        </div>
-      );
-    }
-
-    if (isPeakPeriod) {
-      const periodClass = getPeakPeriodClass(value);
-      return (
-        <div 
-          style={{ 
-            display: 'flex', 
-            flexDirection: 'column', 
-            alignItems: 'center', 
-            lineHeight: 1,
-            gap: '1px'
-          }}
-        >
-          <span style={{ fontWeight: 'bold' }}>
-            {formatSmart(value, decimalPlaces)}
-          </span>
-          <small 
-            style={{ 
-              fontSize: '0.65em', 
-              opacity: 0.9,
-              fontWeight: '500',
-              textShadow: isDarkMode ? '1px 1px 2px rgba(0,0,0,0.6)' : '1px 1px 2px rgba(255,255,255,0.6)'
-            }}
-            aria-label={`Peak period: ${periodClass.state}`}
-          >
-            {periodClass.state}
-          </small>
-        </div>
-      );
-    }
-
+    // All other cells: just show the formatted number
     return (
-      <span style={{ fontWeight: type === 'dir' ? 'normal' : '500' }}>
+      <span style={{ fontWeight: 'bold' }}>
         {formatSmart(value, decimalPlaces)}
       </span>
     );
-  }, [value, type, rowKey, decimalPlaces, isDarkMode]);
+  }, [value, type, isDarkMode, decimalPlaces]);
 
   return (
     <td 

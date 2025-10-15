@@ -70,7 +70,8 @@ export const TimeControl = ({
   formatDateTime,
   stepHours = 1,
   playIcon = '▶️',
-  pauseIcon = '⏸️'
+  pauseIcon = '⏸️',
+  minIndex = 0
 }) => (
   <div className="time-control">
     <div className="forecast-info">
@@ -84,7 +85,7 @@ export const TimeControl = ({
         aria-label="Forecast Time"
         type="range"
         className="time-slider"
-        min="0"
+        min={minIndex}
         max={totalSteps}
         value={sliderIndex}
         onChange={(e) => onSliderChange(e.target.value)}
@@ -158,11 +159,14 @@ export const DataInfo = ({
 /**
  * Status Bar Footer
  */
-export const StatusBar = ({ copyright }) => (
+/**export const StatusBar = ({ copyright, lastUpdated }) => (
   <div className="status-bar">
+    <div className="status-indicator">
+      {lastUpdated && <span className="last-update-time">{lastUpdated}</span>}
+    </div>
     <div>{copyright}</div>
   </div>
-);
+);**/
 
 const UIComponents = {
   ControlGroup,
@@ -170,7 +174,7 @@ const UIComponents = {
   TimeControl,
   OpacityControl,
   DataInfo,
-  StatusBar
+  //StatusBar
 };
 
 export default UIComponents;

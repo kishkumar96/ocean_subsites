@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { MARINE_CONFIG } from '../config/marineVariables.js';
 
 /**
  * A+ Time Animation Hook with Adaptive Timing and Frame Buffering
@@ -13,6 +14,7 @@ export const useTimeAnimation = (capTime) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [animationSpeed, setAnimationSpeed] = useState(3000); // Adaptive speed
   const [isBuffering, setIsBuffering] = useState(false);
+  const [minIndex, setMinIndex] = useState(0); // Do not allow sliding before this index
   
   // Performance tracking refs
   const frameLoadTimes = useRef([]);
@@ -118,18 +120,63 @@ export const useTimeAnimation = (capTime) => {
     setIsBuffering(false);
   }, [totalSteps, isBuffering, capTime.availableTimestamps]); // Stable dependencies
 
-  // Reset slider when capabilities change
+  // Reset slider when capabilities change - Initialize to (last available - 7 days)
   useEffect(() => {
     if (!capTime.loading && totalSteps > 0) {
-      setSliderIndex(0);
+      const MS_IN_DAY = 24 * 60 * 60 * 1000;
+      const offsetDays = 7; // Default offset
+      let initialIndex = 0;
+
+      try {
+        if (capTime.availableTimestamps && capTime.availableTimestamps.length > 0) {
+          const timestamps = capTime.availableTimestamps;
+          const last = timestamps[timestamps.length - 1];
+          const targetTime = new Date(last.getTime() - offsetDays * MS_IN_DAY);
+          
+          // Find first index >= targetTime; if none, use 0
+          let idx = timestamps.findIndex(t => t.getTime() >= targetTime.getTime());
+          if (idx === -1) {
+            idx = 0;
+          }
+          initialIndex = Math.max(0, Math.min(idx, totalSteps));
+          
+          console.log(`🎯 Slider Initialization (last-7days):`);
+          console.log(`   Last time: ${last.toISOString()}`);
+          console.log(`   Target time (last-7d): ${targetTime.toISOString()}`);
+          console.log(`   Using index: ${initialIndex}/${timestamps.length - 1}`);
+          console.log(`   Selected time: ${timestamps[initialIndex]?.toISOString()}`);
+        } else if (capTime.start && capTime.end && capTime.stepHours) {
+          const stepMs = (capTime.stepHours || 6) * 60 * 60 * 1000;
+          const targetTime = new Date(capTime.end.getTime() - offsetDays * MS_IN_DAY);
+          const rawIndex = Math.round((targetTime.getTime() - capTime.start.getTime()) / stepMs);
+          initialIndex = Math.max(0, Math.min(rawIndex, totalSteps));
+          
+          console.log(`🎯 Slider Initialization (computed from start/end/step):`);
+          console.log(`   Start: ${capTime.start.toISOString()}`);
+          console.log(`   End: ${capTime.end.toISOString()}`);
+          console.log(`   Target (last-7d): ${targetTime.toISOString()}`);
+          console.log(`   Using index: ${initialIndex}/${totalSteps}`);
+        } else {
+          // Fallback to configured default index
+          initialIndex = Math.min(MARINE_CONFIG.DEFAULT_SLIDER_INDEX, totalSteps);
+          console.log(`🎯 Slider Initialization (fallback config index): ${initialIndex}`);
+        }
+      } catch (e) {
+        console.warn('⚠️ Error determining initial slider index, using fallback.', e);
+        initialIndex = Math.min(MARINE_CONFIG.DEFAULT_SLIDER_INDEX, totalSteps);
+      }
+
+  setSliderIndex(initialIndex);
+  setMinIndex(initialIndex); // Prevent sliding earlier than last-7-days
       setIsPlaying(false);
+
       // Reset performance tracking and buffer
       frameLoadTimes.current = [];
       frameBuffer.current.clear();
       animationQuality.current = 'high';
       setAnimationSpeed(3000);
     }
-  }, [capTime.loading, totalSteps]);
+  }, [capTime.loading, totalSteps, capTime.availableTimestamps, capTime.start, capTime.end, capTime.stepHours]);
 
   // Enhanced playback timer with adaptive timing and frame buffering
   useEffect(() => {
@@ -149,7 +196,7 @@ export const useTimeAnimation = (capTime) => {
             setIsPlaying(false); // Stop at the end, user can restart if needed
             setIsBuffering(false);
             frameBuffer.current.clear(); // Clear buffer on animation end
-            return 0;
+            return minIndex; // Respect minimum allowed index
           }
           
           // Track performance for this frame transition
@@ -195,7 +242,7 @@ export const useTimeAnimation = (capTime) => {
       }
       setIsBuffering(false);
     };
-  }, [isPlaying, capTime.loading, totalSteps, calculateOptimalSpeed, trackFramePerformance, preloadFrames]);
+  }, [isPlaying, capTime.loading, totalSteps, calculateOptimalSpeed, trackFramePerformance, preloadFrames, minIndex]);
 
   // Control functions
   const play = useCallback(() => setIsPlaying(true), []);
@@ -213,15 +260,15 @@ export const useTimeAnimation = (capTime) => {
   
   const stepBackward = useCallback(() => {
     setSliderIndex(prev => {
-      const prevIndex = Math.max(prev - 1, 0);
+      const prevIndex = Math.max(prev - 1, minIndex);
       return prevIndex;
     });
-  }, []);
+  }, [minIndex]);
   
   const setSliderToIndex = useCallback((index) => {
-    const clampedIndex = Math.max(0, Math.min(index, totalSteps));
+    const clampedIndex = Math.max(minIndex, Math.min(index, totalSteps));
     setSliderIndex(clampedIndex);
-  }, [totalSteps]);
+  }, [totalSteps, minIndex]);
 
   return {
     sliderIndex,
@@ -231,6 +278,7 @@ export const useTimeAnimation = (capTime) => {
     totalSteps,
     currentSliderDate,
     currentSliderDateStr,
+  minIndex,
     // A+ Features
     isBuffering,
     animationSpeed,

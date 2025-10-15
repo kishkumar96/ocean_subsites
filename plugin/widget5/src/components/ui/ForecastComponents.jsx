@@ -1,7 +1,7 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import { InfoDisplay, AccessibleSlider, ActionButton } from './SharedComponents';
-import { formatTimeString, getControlConfig } from '../../config/UIConfig';
+import { formatTimeString, getControlConfig } from '../../config/uiConfig';
 
 /**
  * Time control component with slider and playback controls
@@ -14,7 +14,8 @@ export const TimeControl = ({
   onSliderChange,
   onPlayToggle,
   disabled = false,
-  formatTime
+  formatTime,
+  minIndex = 0
 }) => {
   const timeConfig = getControlConfig('timeSlider');
   const playConfig = getControlConfig('playButton');
@@ -54,7 +55,7 @@ export const TimeControl = ({
         <AccessibleSlider
           label="Time"
           value={sliderIndex}
-          min={0}
+          min={minIndex}
           max={totalSteps}
           onChange={onSliderChange}
           ariaLabel={timeConfig.ariaLabel}
@@ -164,10 +165,16 @@ DataInfoPanel.propTypes = {
  */
 export const StatusBar = ({
   copyright,
-  className = ''
+  className = '',
+  lastUpdated
 }) => {
   return (
     <div className={`status-bar ${className}`}>
+      <div className="status-indicator">
+        <div className="status-dot"></div>
+        <span>Live</span>
+        <span className="last-update-time">{lastUpdated}</span>
+      </div>
       <div>{copyright}</div>
     </div>
   );
@@ -175,5 +182,6 @@ export const StatusBar = ({
 
 StatusBar.propTypes = {
   copyright: PropTypes.string.isRequired,
-  className: PropTypes.string
+  className: PropTypes.string,
+  lastUpdated: PropTypes.string
 };

@@ -1,105 +1,13 @@
-
-.offcanvas-bottom-custom {
-  --bs-offcanvas-height: 500px;
-  height: var(--bs-offcanvas-height);
-  top: auto;
-  bottom: 0;
-  z-index: 12000;
-  background: rgba(10, 36, 99, 0.95);
-  backdrop-filter: blur(8px);
-  color: #e2e8f0;
-  overflow: hidden;
-  transition: height 0.2s ease-out;
-  border-top: 1px solid rgba(144, 224, 239, 0.3);
-  max-height: 90vh;
-  min-height: 180px;
-  resize: none;
+/* Ensure the bottom offcanvas can be dynamically resized, even if a global
+   rule sets a fixed height with !important (e.g., 35vh). */
+.offcanvas.offcanvas-bottom.bottom-offcanvas {
+  /* Use Bootstrap's CSS variable to control height dynamically */
+  height: var(--bs-offcanvas-height) !important;
+  max-height: 100vh;
 }
 
-.drag-handle {
-  height: 12px;
-  cursor: ns-resize;
-  background: rgba(255, 255, 255, 0.1);
-  border-top-left-radius: 8px;
-  border-top-right-radius: 8px;
-  text-align: center;
-  user-select: none;
-  margin: -8px 0 0 0;
-}
-
-.drag-handle-inner {
-  width: 40px;
-  height: 4px;
-  background: rgba(255, 255, 255, 0.4);
-  border-radius: 2px;
-  margin: 4px auto;
-}
-
-.offcanvas-header-custom {
-  display: flex;
-  align-items: center;
-  border-bottom: 1px solid rgba(144, 224, 239, 0.2);
-  padding: 0 1rem 0 0.5rem;
-}
-
-.tabs-container {
-  display: flex;
-  flex: 1;
-  padding-top: 10px;
-}
-
-.tab-button {
-  border: none;
-  background: none;
-  padding: 8px 20px;
-  margin-right: 8px;
-  font-weight: 400;
-  color: #cbd5e1;
-  cursor: pointer;
-  font-size: 16px;
-  transition: border-bottom 0.1s;
-  border-bottom: 2px solid transparent;
-}
-
-.tab-button.active {
-  font-weight: 600;
-  color: #90e0ef;
-  border-bottom: 2px solid #90e0ef;
-}
-
-.close-button-custom {
-  border: none;
-  background: none;
-  font-size: 26px;
-  margin-left: 8px;
-  color: #94a3b8;
-  cursor: pointer;
-  line-height: 1;
-}
-
-.offcanvas-body-custom {
-  padding-top: 16px;
-  overflow: auto;
-  display: flex;
-  flex-direction: column;
-}
-
-.tab-panel {
-  display: none;
-  flex: 1;
-  overflow: auto;
-}
-
-.tab-panel.active {
-  display: flex;
-}
-
-.loading-indicator,
-.error-indicator {
-  text-align: center;
-  padding: 2rem;
-}
-
-.error-indicator {
-  color: red;
+/* Optional: keep body from flex-growing unexpectedly during drag */
+.offcanvas.offcanvas-bottom.bottom-offcanvas .offcanvas-body {
+  /* Let content scroll inside without changing container height */
+  overflow-y: auto;
 }

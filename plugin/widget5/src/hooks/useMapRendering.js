@@ -25,7 +25,7 @@ export const useMapRendering = ({
   // Initialize map with base layers
   useEffect(() => {
     if (mapRef.current && !mapInstance.current) {
-      const map = L.map(mapRef.current);
+      const map = L.map(mapRef.current, { attributionControl: false });
       if (bounds) {
         map.fitBounds(bounds);
       }
@@ -46,10 +46,10 @@ export const useMapRendering = ({
       // Create WMS layer group
       wmsLayerGroup.current = L.layerGroup().addTo(map);
 
-      // Add layer controls
+      // Add layer controls - positioned at top-left to make room for compass at top-right
       const baseMaps = { "OpenStreetMap": osmLayer, "Satellite": satelliteLayer };
       const overlayMaps = { "Wave Forecast": wmsLayerGroup.current };
-      L.control.layers(baseMaps, overlayMaps).addTo(map);
+      L.control.layers(baseMaps, overlayMaps, { position: 'topleft' }).addTo(map);
 
       // Add controls
       if (map.zoomControl) {
@@ -162,6 +162,61 @@ export const useMapRendering = ({
     staticLayers,
     addWMSTileLayer
   ]);
+
+  // ✅ NEW: Efficiently update TIME parameter without recreating layers
+  useEffect(() => {
+    if (!wmsLayerRefs.current.length || !currentSliderDateStr) return;
+
+    console.log(`🕒 Updating TIME parameter for ${wmsLayerRefs.current.length} layers to: ${currentSliderDateStr}`);
+
+    wmsLayerRefs.current.forEach(layer => {
+      if (layer && layer.setParams && layer.wmsParams) {
+        // Check if this layer should have time dimension
+        const layerName = layer.wmsParams.layers || '';
+        const isDirectionLayer = layerName.includes('dirm');
+        const isInundationLayer = layerName.includes('raro_inun'); // Static layer, no time dimension
+        
+        // Skip time update for static/time-dimensionless layers
+        if (!isDirectionLayer && !isInundationLayer) {
+          // Format time for THREDDS if needed
+          const isThredds = layer._url && layer._url.includes('thredds');
+          const timeValue = isThredds 
+            ? new Date(currentSliderDateStr).toISOString().replace(/\.\d{3}Z$/, 'Z')
+            : currentSliderDateStr;
+          
+          // Update time parameter without full redraw
+          layer.setParams({ time: timeValue }, false);
+          console.log(`   ✅ Updated TIME for layer: ${layerName}`);
+        } else {
+          console.log(`   ⏭️  Skipped TIME for static/direction layer: ${layerName}`);
+        }
+      }
+    });
+
+    // Single redraw for all layers after updating params
+    wmsLayerRefs.current.forEach(layer => {
+      if (layer && layer.redraw) {
+        layer.redraw();
+      }
+    });
+
+  }, [currentSliderDateStr]);
+
+  // ✅ NEW: Update opacity for all active layers when opacity changes
+  useEffect(() => {
+    if (!wmsLayerRefs.current.length) return;
+
+    console.log(`🎨 Updating opacity for ${wmsLayerRefs.current.length} layers to: ${wmsOpacity}`);
+
+    wmsLayerRefs.current.forEach(layer => {
+      if (layer && layer.setOpacity) {
+        layer.setOpacity(wmsOpacity);
+        const layerName = layer.wmsParams?.layers || 'unknown';
+        console.log(`   ✅ Updated opacity for layer: ${layerName}`);
+      }
+    });
+
+  }, [wmsOpacity]);
 
   return {
     mapRef,

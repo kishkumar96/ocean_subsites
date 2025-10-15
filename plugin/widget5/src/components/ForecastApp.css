@@ -67,8 +67,8 @@
   position: absolute;
   bottom: 20px;
   right: 20px;
-  z-index: 1000;
-  pointer-events: auto;
+  z-index: 1010; /* Higher z-index to ensure it's above Leaflet controls */
+  pointer-events: auto; /* Enable clicks on legend */
   
   /* Professional marine styling */
   background: var(--legend-bg);
@@ -147,11 +147,11 @@
 }
 
 .marine-legend-scale {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
+  position: relative;
   height: min(25vh, 200px); /* Match gradient height */
   min-width: 25px;
+  /* Ensure scale values align properly with gradient */
+  align-items: flex-start;
 }
 
 .marine-legend-labels {
@@ -173,6 +173,7 @@
 }
 
 .marine-legend-tick {
+  position: absolute;
   font-size: 8px;
   font-weight: 600;
   color: var(--legend-text);
@@ -213,6 +214,7 @@
   }
   
   .marine-legend-scale {
+    position: relative;
     height: min(20vh, 150px);
     min-width: 20px;
   }
@@ -246,6 +248,7 @@
   }
   
   .marine-legend-scale {
+    position: relative;
     height: min(18vh, 120px);
     min-width: 18px;
   }
@@ -416,7 +419,7 @@
 /* Metadata Toggle Button */
 .metadata-toggle {
   position: absolute;
-  bottom: 80px; /* Position above Leaflet scale control */
+  bottom: 20px; /* Align with Leaflet scale control */
   left: 20px;
   z-index: 1000;
   background: linear-gradient(135deg, #2c3e50, #34495e);
@@ -449,7 +452,7 @@
 /* Range Metadata Panel - Above Metadata Toggle */
 .range-metadata-panel {
   position: absolute;
-  bottom: 130px; /* Position above metadata toggle button */
+  bottom: 70px; /* Position above metadata toggle button */
   left: 20px;
   max-width: 260px;
   max-height: min(calc(100vh - 200px), 400px); /* Constrain height responsively */
@@ -1904,6 +1907,7 @@
   }
   
   .marine-legend-scale {
+    position: relative;
     height: min(30vh, 250px);
   }
   
@@ -1919,6 +1923,7 @@
   }
   
   .marine-legend-scale {
+    position: relative;
     height: min(35vh, 300px);
   }
 }
@@ -1975,4 +1980,9 @@
   .leaflet-bottom.leaflet-right {
     margin-bottom: calc(min(18vh, 120px) + 40px) !important;  
   }
+}
+
+.last-update-time {
+  color: #90e0ef;
+  margin-left: 1rem;
 }

@@ -3,9 +3,6 @@ import Offcanvas from "react-bootstrap/Offcanvas";
 import 'chart.js/auto';
 import Plot from 'react-plotly.js';
 import './BottomBuoyOffCanvas.css';
-import './WorldClassOffCanvas.css';
-import useMapContainerRect from "../hooks/useMapContainerRect";
-
 
 // Fixed color palette for datasets
 const BUOY_COLORS = [
@@ -20,31 +17,14 @@ const MODEL_COLORS = [
   '#43A047', // Vivid Green
 ];
 
-const FALLBACK_MIN_HEIGHT = 140;
-const FALLBACK_MAX_HEIGHT = 900;
+const MIN_HEIGHT = 100;
+const MAX_HEIGHT = 800;
 
-function computePanelBounds() {
-  if (typeof window === 'undefined') {
-    const initial = Math.min(Math.max(400, FALLBACK_MIN_HEIGHT), FALLBACK_MAX_HEIGHT);
-    return { min: FALLBACK_MIN_HEIGHT, max: FALLBACK_MAX_HEIGHT, initial };
-  }
-
-  const viewportHeight = window.innerHeight;
-  const min = Math.min(
-    Math.max(Math.round(viewportHeight * 0.25), FALLBACK_MIN_HEIGHT),
-    320
-  );
-  const max = Math.max(Math.round(viewportHeight * 0.85), min + 180);
-  const initialCandidate = Math.round(viewportHeight * 0.5);
-  const initial = Math.min(Math.max(initialCandidate, min + 60), max);
-  return { min, max, initial };
-}
-
-const MODEL_VARIABLES = ["hs_p1", "dirp_p1"];
+const MODEL_VARIABLES = ["hs_p1", "tp_p1", "dirp_p1"];
 const LATEST_CAPABILITY_URL = "https://gemthreddshpc.spc.int/thredds/wms/POP/model/country/spc/forecast/hourly/COK/Rarotonga_UGRID.nc?service=WMS&version=1.3.0&request=GetCapabilities";
 const PREVIOUS_CAPABILITY_URL = "https://gemthreddshpc.spc.int/thredds/wms/POP/model/country/spc/forecast/hourly/COK/Rarotonga_UGRID_01.nc?service=WMS&version=1.3.0&request=GetCapabilities";
 
-// Time parsing functions reused
+// Time parsing functions from NiueForecast.js
 function parseTimeDimensionFromCapabilities(xml, layerName) {
   const parser = new window.DOMParser();
   const dom = parser.parseFromString(xml, "text/xml");
@@ -61,19 +41,13 @@ function parseTimeDimensionFromCapabilities(xml, layerName) {
   const dimensionNodes = Array.from(targetLayer.getElementsByTagName("Dimension"));
   for (const dim of dimensionNodes) {
     if (dim.getAttribute("name") === "time") {
-      return {
-        raw: dim.textContent.trim(),
-        defaultTime: dim.getAttribute("default") || null
-      };
+      return dim.textContent.trim();
     }
   }
   const extentNodes = Array.from(targetLayer.getElementsByTagName("Extent"));
   for (const ext of extentNodes) {
     if (ext.getAttribute("name") === "time") {
-      return {
-        raw: ext.textContent.trim(),
-        defaultTime: ext.getAttribute("default") || null
-      };
+      return ext.textContent.trim();
     }
   }
   return null;
@@ -92,7 +66,6 @@ function getTimeRangeFromDimension(dimStr) {
   const times = dimStr.split(",").map(s => new Date(s));
   if (times.length > 1) {
     const stepMs = times[1] - times[0];
-
     return {
       start: times[0],
       end: times[times.length - 1],
@@ -108,11 +81,9 @@ function formatDateISOString(date) {
 
 // New functions for fetching forecast data
 async function fetchCapabilities(url) {
-  //console.log(`Fetching capabilities from: ${url}`);
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Failed to fetch capabilities from ${url}`);
   const xml = await res.text();
-  //console.log("URL::" + url);
   return xml;
 }
 
@@ -126,9 +97,6 @@ async function fetchForecastData(baseUrl, layer, timeRange) {
   if (!res.ok) throw new Error(`Failed to fetch forecast data from ${baseUrl}`);
   const json = await res.json();
   
-  //console.log(`Forecast data response for ${baseUrl} [${layer}]:`, json);
-  //console.log(`Time range: ${timeParam}`);
-  //console.log(`Data points: ${json.domain?.axes?.t?.values?.length || 0}`);
   
   return json;
 }
@@ -146,20 +114,14 @@ async function fetchCombinedForecastData() {
     const previousTimeDim = parseTimeDimensionFromCapabilities(previousCapabilities, "hs_p1");
     console.log("latestTimeDim:: " + latestTimeDim);
 
-    //console.log('Parsed time dimensions:');
-    //console.log('Latest time dimension:', latestTimeDim);
-    //console.log('Previous time dimension:', previousTimeDim);
 
     if (!latestTimeDim || !previousTimeDim) {
       throw new Error("Could not parse time dimensions from capabilities");
     }
 
-    const latestTimeRange = getTimeRangeFromDimension(latestTimeDim.raw);
-    const previousTimeRange = getTimeRangeFromDimension(previousTimeDim.raw);
+    const latestTimeRange = getTimeRangeFromDimension(latestTimeDim);
+    const previousTimeRange = getTimeRangeFromDimension(previousTimeDim);
 
-    //console.log('Parsed time ranges:');
-    //console.log('Latest time range:', latestTimeRange);
-    //console.log('Previous time range:', previousTimeRange);
 
     if (!latestTimeRange || !previousTimeRange) {
       throw new Error("Could not parse time ranges");
@@ -172,7 +134,6 @@ async function fetchCombinedForecastData() {
     const previousStart = previousTimeRange.start;
     const previousEnd = latestTimeRange.start;
 
-    //console.log('Time ranges:', {
     //   latest: { start: latestStart, end: latestEnd },
     //   previous: { start: previousStart, end: previousEnd }
     // });
@@ -196,8 +157,8 @@ async function fetchCombinedForecastData() {
         )
       ]);
       console.log(previousData)
-      // // Debug: print the full JSON for direction component
-      // if (v === "dirp") {
+      // // Debug: print the full JSON for tp_p1 and dirp_p1
+      // if (v === "tp_p1" || v === "dirp") {
       //   //console.log(`Full latestData for ${v}:`, latestData);
       //   //console.log(`Full previousData for ${v}:`, previousData);
       // }
@@ -255,32 +216,34 @@ async function fetchAllModelVariables() {
   }
 }
 
-// function extractModelVariables(model, variables) {
-//   // Always return arrays for requested variables, fill with nulls if missing
-//   const result = {};
-//   const N = model.domain.axes.t.values.length;
-//   for (const v of variables) {
-//     if (model.ranges && model.ranges[v]) {
-//       result[v] = {
-//         values: model.ranges[v].values,
-//         label:
-//           (model.parameters &&
-//             model.parameters[v] &&
-//             (model.parameters[v].description?.en ||
-//               model.parameters[v].observedProperty?.label?.en ||
-//               v)) ||
-//           v,
-//       };
-//     } else {
-//       // Fill with nulls so axes always appear, but line will not show
-//       result[v] = {
-//         values: Array(N).fill(null),
-//         label: v,
-//       };
-//     }
-//   }
-//   return result;
-// }
+/*
+function extractModelVariables(model, variables) {
+  // Always return arrays for requested variables, fill with nulls if missing
+  const result = {};
+  const N = model.domain.axes.t.values.length;
+  for (const v of variables) {
+    if (model.ranges && model.ranges[v]) {
+      result[v] = {
+        values: model.ranges[v].values,
+        label:
+          (model.parameters &&
+            model.parameters[v] &&
+            (model.parameters[v].description?.en ||
+              model.parameters[v].observedProperty?.label?.en ||
+              v)) ||
+          v,
+      };
+    } else {
+      // Fill with nulls so axes always appear, but line will not show
+      result[v] = {
+        values: Array(N).fill(null),
+        label: v,
+      };
+    }
+  }
+  return result;
+}
+*/
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -310,15 +273,13 @@ class ErrorBoundary extends React.Component {
 }
 
 function BottomBuoyOffCanvas({ show, onHide, buoyId }) {
-  const [panelBounds, setPanelBounds] = useState(() => computePanelBounds());
-  const [height, setHeight] = useState(() => computePanelBounds().initial);
+  const [height, setHeight] = useState(400);
   const [activeTab, setActiveTab] = useState("buoy");
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [fetchError, setFetchError] = useState("");
   const [/* parentHeight */, setParentHeight] = useState(undefined);
   const [isDarkMode, setIsDarkMode] = useState(false);
-  const mapRect = useMapContainerRect(show);
 
   // Check for dark mode
   useEffect(() => {
@@ -341,12 +302,12 @@ function BottomBuoyOffCanvas({ show, onHide, buoyId }) {
   const [modelLoading, setModelLoading] = useState(false);
   const [modelError, setModelError] = useState("");
 
-
   // Drag handle logic
   const dragging = useRef(false);
   const startY = useRef(0);
-  const startHeight = useRef(height);
+  const startHeight = useRef(400);
   const onMouseDown = (e) => {
+    console.log("🎯 Drag started - clientY:", e.clientY, "current height:", height);
     dragging.current = true;
     startY.current = e.clientY;
     startHeight.current = height;
@@ -357,10 +318,12 @@ function BottomBuoyOffCanvas({ show, onHide, buoyId }) {
   const onMouseMove = (e) => {
     if (!dragging.current) return;
     let newHeight = startHeight.current - (e.clientY - startY.current);
-    newHeight = Math.min(Math.max(newHeight, panelBounds.min), panelBounds.max);
+    newHeight = Math.min(Math.max(newHeight, MIN_HEIGHT), MAX_HEIGHT);
+    console.log("🎯 Dragging - newHeight:", newHeight, "clientY:", e.clientY);
     setHeight(newHeight);
   };
   const onMouseUp = () => {
+    console.log("🎯 Drag ended - final height:", height);
     dragging.current = false;
     document.body.style.cursor = "";
     document.removeEventListener("mousemove", onMouseMove);
@@ -389,23 +352,8 @@ function BottomBuoyOffCanvas({ show, onHide, buoyId }) {
     };
   }, [show, buoyId]);
 
-  useEffect(() => {
-    const handleResize = () => {
-      const bounds = computePanelBounds();
-      setPanelBounds(bounds);
-      setHeight(prev => {
-        const clamped = Math.min(Math.max(prev, bounds.min), bounds.max);
-        return clamped === prev ? prev : clamped;
-      });
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
   // Fetch Sofarocean data when buoyId changes and panel is open
   useEffect(() => {
-
     if (!show || !buoyId) return;
     setLoading(true);
     setFetchError("");
@@ -418,13 +366,11 @@ function BottomBuoyOffCanvas({ show, onHide, buoyId }) {
         return res.json();
       })
       .then(json => {
-
         setData(json.data);
         setLoading(false);
         setHasLoadedData(prev => ({ ...prev, buoy: true }));
       })
-      .catch(error => {
-        console.error('Buoy data fetch error:', error);
+      .catch(() => {
         setFetchError("Failed to fetch buoy data");
         setLoading(false);
         setHasLoadedData(prev => ({ ...prev, buoy: false }));
@@ -505,129 +451,63 @@ function BottomBuoyOffCanvas({ show, onHide, buoyId }) {
     plotlyBuoyLayout = {
       autosize: true,
       height: Math.max(Math.min(height - 100, 500), 300),
-      margin: { t: 80, l: 80, r: 140, b: 80 },
+      margin: { t: 60, l: 70, r: 70, b: 60 },
       paper_bgcolor: isDarkMode ? '#2e2f33' : '#ffffff',
       plot_bgcolor: isDarkMode ? '#2e2f33' : '#ffffff',
       font: { color: isDarkMode ? '#f1f5f9' : '#1e293b' },
       legend: { 
         orientation: 'h', 
-        y: 1.20, 
+        y: 1.15, 
         x: 0.5, 
         xanchor: 'center',
-        font: { 
-          color: isDarkMode ? '#f1f5f9' : '#1e293b',
-          size: 12,
-          family: 'Inter, sans-serif'
-        },
-        bgcolor: isDarkMode ? 'rgba(63, 72, 84, 0.9)' : 'rgba(255, 255, 255, 0.9)',
-        bordercolor: isDarkMode ? '#44454a' : '#e2e8f0',
-        borderwidth: 1
+        font: { color: isDarkMode ? '#f1f5f9' : '#1e293b' },
+        bgcolor: isDarkMode ? '#3f4854' : '#ffffff',
+        bordercolor: isDarkMode ? '#44454a' : '#e2e8f0'
       },
       xaxis: { 
-        title: { 
-          text: 'Time (UTC)', 
-          font: { 
-            color: isDarkMode ? '#f1f5f9' : '#1e293b',
-            size: 13,
-            family: 'Inter, -apple-system, BlinkMacSystemFont, sans-serif',
-            weight: 500
-          }
-        }, 
+        title: { text: 'Time (UTC)', font: { color: isDarkMode ? '#f1f5f9' : '#1e293b' } }, 
         tickangle: -45, 
         showgrid: true,
-        gridcolor: isDarkMode ? '#374151' : '#f3f4f6',
-        gridwidth: 1,
+        gridcolor: isDarkMode ? '#44454a' : '#e2e8f0',
         tickmode: 'auto',
-        nticks: 8,
-        tickformat: '%b %d<br>%H:%M',
-        tickfont: { 
-          size: 10, 
-          color: isDarkMode ? '#d1d5db' : '#4b5563',
-          family: 'Inter, sans-serif'
-        },
+        nticks: 10,
+        tickformat: '%b %d %Y',
+        tickfont: { size: 10, color: isDarkMode ? '#f1f5f9' : '#1e293b' },
         tickwidth: 1,
         ticklen: 5,
-        tickcolor: isDarkMode ? '#6b7280' : '#9ca3af',
+        tickcolor: isDarkMode ? '#a1a1aa' : '#666',
         showticklabels: true,
         automargin: true,
         zerolinecolor: isDarkMode ? '#44454a' : '#e2e8f0'
       },
       yaxis: { 
-        title: { 
-          text: 'Wave Height (m)', 
-          font: { 
-            color: isDarkMode ? '#f1f5f9' : '#1e293b',
-            size: 13,
-            family: 'Inter, -apple-system, BlinkMacSystemFont, sans-serif',
-            weight: 500
-          }
-        }, 
+        title: { text: 'Height (m)', font: { color: isDarkMode ? '#f1f5f9' : '#1e293b' } }, 
         side: 'left', 
         showgrid: true, 
-        gridcolor: isDarkMode ? '#374151' : '#f3f4f6',
-        gridwidth: 1,
+        gridcolor: isDarkMode ? '#44454a' : '#e2e8f0',
         zeroline: false,
-        tickfont: { 
-          color: isDarkMode ? '#d1d5db' : '#4b5563',
-          size: 11,
-          family: 'Inter, sans-serif'
-        },
-        tickformat: '.2f',
-        tickmode: 'linear',
-        dtick: 0.5,
+        tickfont: { color: isDarkMode ? '#f1f5f9' : '#1e293b' },
         zerolinecolor: isDarkMode ? '#44454a' : '#e2e8f0'
       },
       yaxis2: {
-        title: { 
-          text: 'Period (s)', 
-          font: { 
-            color: isDarkMode ? '#f1f5f9' : '#1e293b',
-            size: 13,
-            family: 'Inter, -apple-system, BlinkMacSystemFont, sans-serif',
-            weight: 500
-          }
-        },
+        title: { text: 'Period (s)', font: { color: isDarkMode ? '#f1f5f9' : '#1e293b' } },
         overlaying: 'y',
         side: 'right',
-        position: 1.0,
         showgrid: false,
         zeroline: false,
-        anchor: 'free',
-        tickfont: { 
-          color: isDarkMode ? '#d1d5db' : '#4b5563',
-          size: 11,
-          family: 'Inter, sans-serif'
-        },
-        tickformat: '.1f',
-        tickmode: 'linear',
-        dtick: 2,
+        anchor: 'x',
+        tickfont: { color: isDarkMode ? '#f1f5f9' : '#1e293b' },
         zerolinecolor: isDarkMode ? '#44454a' : '#e2e8f0'
       },
       yaxis3: {
-        title: { 
-          text: 'Direction (°)', 
-          font: { 
-            color: isDarkMode ? '#f1f5f9' : '#1e293b',
-            size: 13,
-            family: 'Inter, -apple-system, BlinkMacSystemFont, sans-serif',
-            weight: 500
-          }
-        },
+        title: { text: 'Direction (°)', font: { color: isDarkMode ? '#f1f5f9' : '#1e293b' } },
         overlaying: 'y',
         side: 'right',
-        position: 1.12,
+        position: 1,
         showgrid: false,
         zeroline: false,
-        anchor: 'free',
-        tickfont: { 
-          color: isDarkMode ? '#d1d5db' : '#4b5563',
-          size: 11,
-          family: 'Inter, sans-serif'
-        },
-        tickformat: '.0f',
-        tickmode: 'linear',
-        dtick: 45,
-        range: [0, 360],
+        anchor: 'x',
+        tickfont: { color: isDarkMode ? '#f1f5f9' : '#1e293b' },
         zerolinecolor: isDarkMode ? '#44454a' : '#e2e8f0'
       },
       hovermode: 'x unified',
@@ -642,6 +522,7 @@ function BottomBuoyOffCanvas({ show, onHide, buoyId }) {
   let plotlyModelData = [];
   let plotlyModelLayout = null;
   let modelMissingVars = [];
+  console.log("1");
   if (activeTab === "model" && modelData && modelData.domain && modelData.domain.axes && modelData.domain.axes.t) {
     const variables = MODEL_VARIABLES;
  
@@ -653,8 +534,6 @@ function BottomBuoyOffCanvas({ show, onHide, buoyId }) {
     console.log("2");
     // Debug: log the modelData.ranges and the arrays for each variable
     console.log('modelData.ranges:', modelData.ranges);
-    //console.log('hs_p1:', modelData.ranges?.hs_p1?.values);
-    //console.log('dirp_p1:', modelData.ranges?.dirp_p1?.values);
     plotlyModelData = [
       {
         x: labels,
@@ -664,130 +543,78 @@ function BottomBuoyOffCanvas({ show, onHide, buoyId }) {
         mode: 'lines',
         line: { color: MODEL_COLORS[0], width: 2, dash: 'dot' },
         yaxis: 'y',
+      },
+      {
+        x: labels,
+        y: modelData.ranges?.tp_p1?.values || [],
+        name: "Wind Wave Period (Model)",
+        type: 'scatter',
+        mode: 'lines',
+        line: { color: MODEL_COLORS[1], width: 2, dash: 'dot' },
+        yaxis: 'y2',
+      },
+      {
+        x: labels,
+        y: modelData.ranges?.dirp_p1?.values || [],
+        name: "Wind Wave Direction (Model)",
+        type: 'scatter',
+        mode: 'lines',
+        line: { color: MODEL_COLORS[2], width: 2, dash: 'dot' },
+        yaxis: 'y3',
       }
     ];
-    //console.log('plotlyModelData:', plotlyModelData);
     plotlyModelLayout = {
       autosize: true,
       height: Math.max(Math.min(height - 100, 500), 300),
-      margin: { t: 80, l: 80, r: 140, b: 80 },
+      margin: { t: 60, l: 70, r: 70, b: 60 },
       paper_bgcolor: isDarkMode ? '#2e2f33' : '#ffffff',
       plot_bgcolor: isDarkMode ? '#2e2f33' : '#ffffff',
       font: { color: isDarkMode ? '#f1f5f9' : '#1e293b' },
       legend: { 
         orientation: 'h', 
-        y: 1.20, 
+        y: 1.15, 
         x: 0.5, 
         xanchor: 'center',
-        font: { 
-          color: isDarkMode ? '#f1f5f9' : '#1e293b',
-          size: 12,
-          family: 'Inter, sans-serif'
-        },
-        bgcolor: isDarkMode ? 'rgba(63, 72, 84, 0.9)' : 'rgba(255, 255, 255, 0.9)',
-        bordercolor: isDarkMode ? '#44454a' : '#e2e8f0',
-        borderwidth: 1
+        font: { color: isDarkMode ? '#f1f5f9' : '#1e293b' },
+        bgcolor: isDarkMode ? '#3f4854' : '#ffffff',
+        bordercolor: isDarkMode ? '#44454a' : '#e2e8f0'
       },
       xaxis: { 
-        title: { 
-          text: 'Time (UTC)', 
-          font: { 
-            color: isDarkMode ? '#f1f5f9' : '#1e293b',
-            size: 13,
-            family: 'Inter, -apple-system, BlinkMacSystemFont, sans-serif',
-            weight: 500
-          }
-        }, 
+        title: { text: 'Time', font: { color: isDarkMode ? '#f1f5f9' : '#1e293b' } }, 
         tickangle: -45, 
         showgrid: true,
-        gridcolor: isDarkMode ? '#374151' : '#f3f4f6',
-        gridwidth: 1,
-        tickmode: 'auto',
-        nticks: 8,
-        tickformat: '%b %d<br>%H:%M',
-        tickfont: { 
-          color: isDarkMode ? '#d1d5db' : '#4b5563',
-          size: 10,
-          family: 'Inter, sans-serif'
-        },
+        gridcolor: isDarkMode ? '#44454a' : '#e2e8f0',
+        tickfont: { color: isDarkMode ? '#f1f5f9' : '#1e293b' },
         zerolinecolor: isDarkMode ? '#44454a' : '#e2e8f0'
       },
       yaxis: { 
-        title: { 
-          text: 'Wave Height (m)', 
-          font: { 
-            color: isDarkMode ? '#f1f5f9' : '#1e293b',
-            size: 13,
-            family: 'Inter, -apple-system, BlinkMacSystemFont, sans-serif',
-            weight: 500
-          }
-        }, 
+        title: { text: 'Height (m)', font: { color: isDarkMode ? '#f1f5f9' : '#1e293b' } }, 
         side: 'left', 
         showgrid: true, 
-        gridcolor: isDarkMode ? '#374151' : '#f3f4f6',
-        gridwidth: 1,
+        gridcolor: isDarkMode ? '#44454a' : '#e2e8f0',
         zeroline: false,
-        tickfont: { 
-          color: isDarkMode ? '#d1d5db' : '#4b5563',
-          size: 11,
-          family: 'Inter, sans-serif'
-        },
-        tickformat: '.2f',
-        tickmode: 'linear',
-        dtick: 0.5,
+        tickfont: { color: isDarkMode ? '#f1f5f9' : '#1e293b' },
         zerolinecolor: isDarkMode ? '#44454a' : '#e2e8f0'
       },
       yaxis2: {
-        title: { 
-          text: 'Period (s)', 
-          font: { 
-            color: isDarkMode ? '#f1f5f9' : '#1e293b',
-            size: 13,
-            family: 'Inter, -apple-system, BlinkMacSystemFont, sans-serif',
-            weight: 500
-          }
-        },
+        title: { text: 'Period (s)', font: { color: isDarkMode ? '#f1f5f9' : '#1e293b' } },
         overlaying: 'y',
         side: 'right',
-        position: 1.0,
         showgrid: false,
         zeroline: false,
-        anchor: 'free',
-        tickfont: { 
-          color: isDarkMode ? '#d1d5db' : '#4b5563',
-          size: 11,
-          family: 'Inter, sans-serif'
-        },
-        tickformat: '.1f',
-        tickmode: 'linear',
-        dtick: 2,
+        anchor: 'x',
+        tickfont: { color: isDarkMode ? '#f1f5f9' : '#1e293b' },
         zerolinecolor: isDarkMode ? '#44454a' : '#e2e8f0'
       },
       yaxis3: {
-        title: { 
-          text: 'Direction (°)', 
-          font: { 
-            color: isDarkMode ? '#f1f5f9' : '#1e293b',
-            size: 13,
-            family: 'Inter, -apple-system, BlinkMacSystemFont, sans-serif',
-            weight: 500
-          }
-        },
+        title: { text: 'Direction (°)', font: { color: isDarkMode ? '#f1f5f9' : '#1e293b' } },
         overlaying: 'y',
         side: 'right',
-        position: 1.12,
+        position: 1,
         showgrid: false,
         zeroline: false,
-        anchor: 'free',
-        tickfont: { 
-          color: isDarkMode ? '#d1d5db' : '#4b5563',
-          size: 11,
-          family: 'Inter, sans-serif'
-        },
-        tickformat: '.0f',
-        tickmode: 'linear',
-        dtick: 45,
-        range: [0, 360],
+        anchor: 'x',
+        tickfont: { color: isDarkMode ? '#f1f5f9' : '#1e293b' },
         zerolinecolor: isDarkMode ? '#44454a' : '#e2e8f0'
       },
       hovermode: 'x unified',
@@ -825,89 +652,119 @@ function BottomBuoyOffCanvas({ show, onHide, buoyId }) {
     ];
   }
 
-  const offcanvasWidth = mapRect ? `${mapRect.width}px` : "100vw";
-  const offcanvasLeft = mapRect ? `${mapRect.left}px` : "0";
-  const offcanvasRight = mapRect ? "auto" : "0";
-  const offcanvasMargin = mapRect ? "0" : "0 auto";
-
   return (
     <Offcanvas
       show={show}
       onHide={onHide}
       placement="bottom"
-      className={`world-class-offcanvas ${isDarkMode ? '' : 'light-mode'}`}
+      className="bottom-buoy-offcanvas"
       style={{
         height: height,
+        minHeight: height,
+        maxHeight: height,
         zIndex: 12000,
+        background: isDarkMode ? "rgba(63, 72, 84, 0.98)" : "rgba(255,255,255,0.98)",
         color: isDarkMode ? "#f1f5f9" : "#1e293b",
         overflow: "visible",
-        transition: "height 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-        left: offcanvasLeft,
-        right: offcanvasRight,
-        width: offcanvasWidth,
-        margin: offcanvasMargin,
+        transition: "height 0.1s",
+        borderTop: `1px solid ${isDarkMode ? "#44454a" : "#e2e8f0"}`,
+        // Override Bootstrap Offcanvas flex behavior
+        display: "block",
+        flex: "none",
+        flexGrow: 0,
+        flexShrink: 0,
+        flexBasis: "auto",
+        position: "fixed",
+        bottom: 0,
+        left: 0,
+        right: 0,
       }}
       backdrop={false}
       scroll={true}
     >
-
       {/* Drag Handle */}
       <div
-        className={`world-class-drag-handle ${isDarkMode ? '' : 'light-mode'}`}
+        className="drag-handle"
+        style={{
+          height: 12,
+          cursor: "ns-resize",
+          background: isDarkMode ? "#44454a" : "#e0e0e0",
+          borderTopLeftRadius: 8,
+          borderTopRightRadius: 8,
+          textAlign: "center",
+          userSelect: "none",
+          margin: "-8px 0 0 0",
+          position: "relative",
+          zIndex: 1000,
+        }}
         onMouseDown={onMouseDown}
-        title="Drag to resize panel"
-      />
-      
-      {/* Professional Header */}
-      <div className={`world-class-header ${isDarkMode ? '' : 'light-mode'}`}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        {/* Tab Navigation */}
-          <div className={`world-class-tabs ${isDarkMode ? '' : 'light-mode'}`}>
-            {tabLabels.map(tab => (
-              <button
-                key={tab.key}
-                onClick={() => setActiveTab(tab.key)}
-                className={`world-class-tab ${activeTab === tab.key ? 'active' : ''} ${isDarkMode ? '' : 'light-mode'}`}
-                aria-controls={`tab-panel-${tab.key}`}
-                tabIndex={activeTab === tab.key ? 0 : -1}
-                type="button"
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-          
-          {/* Professional Close Button */}
-          <button
-            onClick={onHide}
-            type="button"
-            aria-label="Close Panel"
-            className={`world-class-close ${isDarkMode ? '' : 'light-mode'}`}
-          >
-            ×
-          </button>
-        </div>
+        title="Drag to resize"
+      >
+        <div
+          style={{
+            width: 40,
+            height: 4,
+            background: isDarkMode ? "#a1a1aa" : "#aaa",
+            borderRadius: 2,
+            margin: "4px auto",
+          }}
+        />
       </div>
-      <Offcanvas.Body className={`world-class-content`}>
-        {/* Loading State */}
-        {activeTab === "buoy" && loading && (
-          <div className="world-class-loading">
-            <div className="world-class-spinner"></div>
-            <div className={`world-class-loading-text ${isDarkMode ? '' : 'light-mode'}`}>
-              Loading oceanographic buoy data...
-            </div>
-          </div>
-        )}
-        
-        {/* Error State */}
-        {activeTab === "buoy" && fetchError && (
-          <div className={`world-class-error ${isDarkMode ? '' : 'light-mode'}`}>
-            <strong>Data Fetch Error</strong><br />
-            {fetchError}
-          </div>
-        )}
+      <div style={{ 
+        display: "flex", 
+        alignItems: "center", 
+        borderBottom: `1px solid ${isDarkMode ? "#44454a" : "#eee"}`, 
+        padding: "0 1rem 0 0.5rem" 
+      }}>
+        {/* Custom CSS Tabs */}
+        <div style={{ display: "flex", flex: 1, paddingTop: 10 }}>
+          {tabLabels.map(tab => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              style={{
+                border: "none",
+                borderBottom: activeTab === tab.key ? `2px solid ${isDarkMode ? "#60a5fa" : "#007bff"}` : "2px solid transparent",
+                background: "none",
+                padding: "8px 20px",
+                marginRight: 8,
+                fontWeight: activeTab === tab.key ? "bold" : "normal",
+                color: activeTab === tab.key ? (isDarkMode ? "#60a5fa" : "#007bff") : (isDarkMode ? "#a1a1aa" : "#555"),
+                cursor: "pointer",
+                fontSize: 16,
+                transition: "border-bottom 0.1s"
+              }}
+
+              aria-controls={`tab-panel-${tab.key}`}
+              tabIndex={activeTab === tab.key ? 0 : -1}
+              type="button"
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+        <button
+          onClick={onHide}
+          type="button"
+          aria-label="Close"
+          style={{
+            border: "none",
+            background: "none",
+            fontSize: 26,
+            marginLeft: 8,
+            color: isDarkMode ? "#a1a1aa" : "#666",
+            cursor: "pointer",
+            lineHeight: 1,
+          }}
+        >
+          ×
+        </button>
+      </div>
+      <Offcanvas.Body style={{ paddingTop: 16, height: 'calc(100% - 60px)' }}>
+        {activeTab === "buoy" && loading && <div style={{ textAlign: "center", padding: "2rem" }}>Loading buoy data...</div>}
+        {activeTab === "buoy" && fetchError && <div style={{ color: "red", textAlign: "center" }}>{fetchError}</div>}
         {activeTab === "buoy" && !loading && !fetchError && data?.waves?.length > 0 && (
-          <div className={`world-class-chart ${isDarkMode ? '' : 'light-mode'}`} style={{ width: "100%", height: "100%", minHeight: '300px' }}>
+          <div style={{ width: "100%", height: "100%", minHeight: '300px' }}>
             <ErrorBoundary>
               <Plot
                 data={plotlyBuoyData}
@@ -929,28 +786,17 @@ function BottomBuoyOffCanvas({ show, onHide, buoyId }) {
             </ErrorBoundary>
           </div>
         )}
-        {activeTab === "buoy" && !loading && !fetchError && (!data?.waves || data.waves.length === 0) && (
-          <div className={`world-class-error ${isDarkMode ? '' : 'light-mode'}`}>
-            <strong>No Data Available</strong><br />
-            No buoy data found for this location and time period.
-          </div>
+        {activeTab === "buoy" && !loading && !fetchError && data && (!data.waves || data.waves.length === 0) && (
+          <div style={{ textAlign: "center", color: "#999" }}>No data available for this buoy.</div>
         )}
         {activeTab === "model" && modelLoading && (
-          <div className="world-class-loading">
-            <div className="world-class-spinner"></div>
-            <div className={`world-class-loading-text ${isDarkMode ? '' : 'light-mode'}`}>
-              Loading wave forecast model data...
-            </div>
-          </div>
+          <div style={{ textAlign: "center", padding: "2rem" }}>Loading model data...</div>
         )}
         {activeTab === "model" && modelError && (
-          <div className={`world-class-error ${isDarkMode ? '' : 'light-mode'}`}>
-            <strong>Model Data Error</strong><br />
-            {modelError}
-          </div>
+          <div style={{ color: "red", textAlign: "center" }}>{modelError}</div>
         )}
         {activeTab === "model" && !modelLoading && !modelError && (
-          <div className={`world-class-chart ${isDarkMode ? '' : 'light-mode'}`} style={{ width: "100%", height: "100%", minHeight: '300px' }}>
+          <div style={{ width: "100%", height: "100%", minHeight: '300px' }}>
             <ErrorBoundary>
               <Plot
                 data={plotlyModelData}
@@ -978,21 +824,23 @@ function BottomBuoyOffCanvas({ show, onHide, buoyId }) {
           </div>
         )}
         {activeTab === "model" && !modelLoading && !modelError && !modelChartData && (
-          <div className={`world-class-error ${isDarkMode ? '' : 'light-mode'}`}>
-            <strong>No Model Data Available</strong><br />
-            No wave forecast data found for this location and time period.
-          </div>
+          <div style={{ textAlign: "center", color: "#999" }}>No model data available.</div>
         )}
         {activeTab === "combination" && (
-          <div className={`world-class-chart ${isDarkMode ? '' : 'light-mode'}`} style={{ width: "100%", height: "100%", minHeight: '300px' }}>
+          <div style={{ width: "100%", height: "100%", minHeight: '300px' }}>
             <ErrorBoundary>
               {(!hasLoadedData.buoy || !hasLoadedData.model) ? (
-                <div className="world-class-loading">
-                  <div className="world-class-spinner"></div>
-                  <div className={`world-class-loading-text ${isDarkMode ? '' : 'light-mode'}`}>
-                    Loading data for comparison...
-                  </div>
-                  <div style={{ fontSize: '12px', opacity: 0.7, marginTop: '8px' }}>
+                <div style={{ 
+                  display: 'flex', 
+                  justifyContent: 'center', 
+                  alignItems: 'center', 
+                  height: '100%',
+                  color: '#666',
+                  flexDirection: 'column',
+                  gap: '10px'
+                }}>
+                  <div>Loading data for comparison...</div>
+                  <div style={{ fontSize: '0.9em', color: '#999' }}>
                     {!hasLoadedData.buoy && 'Loading buoy data...'}
                     {!hasLoadedData.model && ' Loading model data...'}
                   </div>
@@ -1053,6 +901,8 @@ function BottomBuoyOffCanvas({ show, onHide, buoyId }) {
                       );
                       console.log("hs_p1 ::" + modelData.ranges?.hs_p1?.values);
                       console.log("dirp_p1 ::" + modelData.ranges?.dirp_p1?.values);
+                      console.log("tp_p1 ::" + modelData.ranges?.tp_p1?.values);
+                      
 
                       modelTraces = [
                         {
@@ -1066,6 +916,15 @@ function BottomBuoyOffCanvas({ show, onHide, buoyId }) {
                         },
                         {
                           x: modelLabels,
+                          y: modelData.ranges?.tp_p1?.values || [],
+                          name: 'Wind Wave Period (Model)',
+                          type: 'scatter',
+                          mode: 'lines',
+                          line: { color: MODEL_COLORS[1], width: 2, dash: 'dot' },
+                          yaxis: 'y2',
+                        },
+                        {
+                          x: modelLabels,
                           y: modelData.ranges?.dirp_p1?.values || [],
                           name: 'Wind Wave Direction (Model)',
                           type: 'scatter',
@@ -1076,7 +935,6 @@ function BottomBuoyOffCanvas({ show, onHide, buoyId }) {
                       ];
                     }
                     
-                    //console.log('Final traces count:', {
                     //   modelTraces: modelTraces.length,
                     //   buoyTraces: buoyTraces.length,
                     //   total: modelTraces.length + buoyTraces.length
@@ -1093,133 +951,91 @@ function BottomBuoyOffCanvas({ show, onHide, buoyId }) {
                     plot_bgcolor: isDarkMode ? '#2e2f33' : '#ffffff',
                     font: { color: isDarkMode ? '#f1f5f9' : '#1e293b' },
                     xaxis: { 
-                      title: { 
-                        text: "Time (UTC)", 
-                        font: { 
-                          color: isDarkMode ? '#f1f5f9' : '#1e293b',
-                          size: 13,
-                          family: 'Inter, -apple-system, BlinkMacSystemFont, sans-serif',
-                          weight: 500
-                        }
-                      }, 
+                      title: { text: "Time", font: { color: isDarkMode ? '#f1f5f9' : '#1e293b' } }, 
                       tickangle: -45, 
                       showgrid: true,
-                      gridcolor: isDarkMode ? '#374151' : '#f3f4f6',
-                      gridwidth: 1,
+                      gridcolor: isDarkMode ? '#44454a' : '#e2e8f0',
                       tickmode: 'auto',
-                      nticks: 8,
-                      tickformat: '%b %d<br>%H:%M',
-                      tickfont: { 
-                        size: 10, 
-                        color: isDarkMode ? '#d1d5db' : '#4b5563',
-                        family: 'Inter, sans-serif'
-                      },
+                      nticks: 10,
+                      tickformat: '%b %d %Y',
+                      tickfont: { size: 10, color: isDarkMode ? '#f1f5f9' : '#1e293b' },
                       tickwidth: 1,
                       ticklen: 5,
-                      tickcolor: isDarkMode ? '#6b7280' : '#9ca3af',
+                      tickcolor: isDarkMode ? '#a1a1aa' : '#666',
                       showticklabels: true,
                       automargin: true,
                       zerolinecolor: isDarkMode ? '#44454a' : '#e2e8f0'
                     },
                     yaxis: { 
                       title: { 
-                        text: "Wave Height (m)", 
+                        text: "Height (m)", 
                         font: { 
                           color: isDarkMode ? '#f1f5f9' : '#1e293b',
-                          size: 13,
-                          family: 'Inter, -apple-system, BlinkMacSystemFont, sans-serif',
-                          weight: 500
+                          size: 12,
+                          family: 'Arial, sans-serif'
                         },
-                        standoff: 15
+                        standoff: 10
                       }, 
                       side: 'left', 
                       showgrid: true, 
-                      gridcolor: isDarkMode ? '#374151' : '#f3f4f6',
-                      gridwidth: 1,
+                      gridcolor: isDarkMode ? '#44454a' : '#e2e8f0',
                       zeroline: false,
-                      tickfont: { 
-                        color: isDarkMode ? '#d1d5db' : '#4b5563',
-                        size: 11,
-                        family: 'Inter, sans-serif'
-                      },
-                      tickformat: '.2f',
-                      tickmode: 'linear',
-                      dtick: 0.5,
+                      tickfont: { color: isDarkMode ? '#f1f5f9' : '#1e293b' },
                       zerolinecolor: isDarkMode ? '#44454a' : '#e2e8f0'
                     },
-                    yaxis2: {
-                      title: { 
-                        text: "Wave Period (s)", 
-                        font: { 
-                          color: isDarkMode ? '#f1f5f9' : '#1e293b',
-                          size: 13,
-                          family: 'Inter, -apple-system, BlinkMacSystemFont, sans-serif',
-                          weight: 500
+                                                                                                                                                                       yaxis2: {
+                        title: { 
+                          text: "Period (s)", 
+                          font: { 
+                            color: isDarkMode ? '#f1f5f9' : '#1e293b',
+                            size: 12,
+                            family: 'Arial, sans-serif'
+                          },
+                          standoff: 70,
+                          x: 1.15
                         },
-                        standoff: 15
+                        overlaying: 'y',
+                        side: 'right',
+                        position: 0.98,
+                        showgrid: false,
+                        zeroline: false,
+                        anchor: 'x',
+                        tickfont: { color: isDarkMode ? '#f1f5f9' : '#1e293b' },
+                        zerolinecolor: isDarkMode ? '#44454a' : '#e2e8f0'
                       },
-                      overlaying: 'y',
-                      side: 'right',
-                      position: 1.0,
-                      showgrid: false,
-                      zeroline: false,
-                      anchor: 'free',
-                      tickfont: { 
-                        color: isDarkMode ? '#d1d5db' : '#4b5563',
-                        size: 11,
-                        family: 'Inter, sans-serif'
-                      },
-                      tickformat: '.1f',
-                      tickmode: 'linear',
-                      dtick: 2,
-                      zerolinecolor: isDarkMode ? '#44454a' : '#e2e8f0'
-                    },
-                    yaxis3: {
-                      title: { 
-                        text: "Direction (°)", 
-                        font: { 
-                          color: isDarkMode ? '#f1f5f9' : '#1e293b',
-                          size: 13,
-                          family: 'Inter, -apple-system, BlinkMacSystemFont, sans-serif',
-                          weight: 500
+                      yaxis3: {
+                        title: { 
+                          text: "Direction (°)", 
+                          font: { 
+                            color: isDarkMode ? '#f1f5f9' : '#1e293b',
+                            size: 12,
+                            family: 'Arial, sans-serif'
+                          },
+                          standoff: 50,
+                          x: 1.25
                         },
-                        standoff: 15
+                        overlaying: 'y',
+                        side: 'right',
+                        position: 0.75,
+                        showgrid: false,
+                        zeroline: false,
+                        anchor: 'x',
+                        tickfont: { color: isDarkMode ? '#f1f5f9' : '#1e293b' },
+                        zerolinecolor: isDarkMode ? '#44454a' : '#e2e8f0'
                       },
-                      overlaying: 'y',
-                      side: 'right',
-                      position: 1.12,
-                      showgrid: false,
-                      zeroline: false,
-                      anchor: 'free',
-                      tickfont: { 
-                        color: isDarkMode ? '#d1d5db' : '#4b5563',
-                        size: 11,
-                        family: 'Inter, sans-serif'
-                      },
-                      tickformat: '.0f',
-                      tickmode: 'linear',
-                      dtick: 45,
-                      range: [0, 360],
-                      zerolinecolor: isDarkMode ? '#44454a' : '#e2e8f0'
-                    },
                     legend: { 
                       orientation: 'h', 
-                      y: 1.20, 
+                      y: 1.15, 
                       x: 0.5, 
                       xanchor: 'center',
-                      font: { 
-                        color: isDarkMode ? '#f1f5f9' : '#1e293b',
-                        size: 12,
-                        family: 'Inter, sans-serif'
-                      },
-                      bgcolor: isDarkMode ? 'rgba(63, 72, 84, 0.9)' : 'rgba(255, 255, 255, 0.9)',
-                      bordercolor: isDarkMode ? '#44454a' : '#e2e8f0',
-                      borderwidth: 1
+                      font: { color: isDarkMode ? '#f1f5f9' : '#1e293b' },
+                      bgcolor: isDarkMode ? '#3f4854' : '#ffffff',
+                      bordercolor: isDarkMode ? '#44454a' : '#e2e8f0'
                     },
                     hovermode: 'x unified',
                     autosize: true,
                     height: Math.max(Math.min(height - 100, 500), 300),
-                    margin: { t: 80, l: 80, r: 140, b: 80 },
+                                         margin: { t: 60, l: 70, r: 120, b: 80 },
                     dragmode: 'pan',
                   }}
                   useResizeHandler={true}
@@ -1238,7 +1054,7 @@ function BottomBuoyOffCanvas({ show, onHide, buoyId }) {
             {hasLoadedData.buoy && hasLoadedData.model && (
               (() => {
                 // Check if all traces are empty
-                // const modelTimes = modelData?.domain?.axes?.t?.values || [];
+                                    // const modelTimes = modelData?.domain?.axes?.t?.values || [];
                 const hasModel = modelData?.ranges?.hs_p1?.values?.length > 0;
                 const hasBuoy = data?.waves?.length > 0;
                 if (!hasModel && !hasBuoy) {
@@ -1261,7 +1077,6 @@ function BottomBuoyOffCanvas({ show, onHide, buoyId }) {
           </div>
         )}
       </Offcanvas.Body>
-
     </Offcanvas>
   );
 }

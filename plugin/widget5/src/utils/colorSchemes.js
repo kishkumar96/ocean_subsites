@@ -45,21 +45,21 @@ export const jetColor = (value, min = 0, max = 4) => {
 export const redColor = (value, min = 0, max = 20) => {
   let v = Math.max(min, Math.min(max, value));
   v = (v - min) / (max - min);
-  // Ocean-harmonized red: from deep coral to warm amber (complements blue theme)
-  const start = { r: 71, g: 85, b: 105 };   // Deep blue-gray (harmonizes with app)
-  const end = { r: 251, g: 113, b: 133 };   // Warm coral-pink
+  // EXACT match to Niue: Light pink → Dark maroon
+  const start = { r: 255, g: 229, b: 229 };  // Light pink (same as Niue)
+  const end = { r: 127, g: 0, b: 0 };        // Dark maroon (same as Niue)
   const r = Math.round(start.r + (end.r - start.r) * v);
   const g = Math.round(start.g + (end.g - start.g) * v);
   const b = Math.round(start.b + (end.b - start.b) * v);
   return `rgb(${r},${g},${b})`;
 };
 
-export const blueColor = (value, min = 0, max = 4) => {
+export const blueColor = (value, min = 0, max = 5) => {
   let v = Math.max(min, Math.min(max, value));
   v = (v - min) / (max - min);
-  // Ocean-harmonized blue: from deep ocean blue to bright cyan
-  const start = { r: 30, g: 58, b: 138 };   // Deep ocean blue (matches app theme)
-  const end = { r: 6, g: 182, b: 212 };     // Bright cyan
+  // EXACT match to Niue: Light blue → Dark navy
+  const start = { r: 232, g: 244, b: 255 };  // Light pastel blue (same as Niue)
+  const end = { r: 0, g: 51, b: 102 };       // Dark navy (same as Niue)
   const r = Math.round(start.r + (end.r - start.r) * v);
   const g = Math.round(start.g + (end.g - start.g) * v);
   const b = Math.round(start.b + (end.b - start.b) * v);

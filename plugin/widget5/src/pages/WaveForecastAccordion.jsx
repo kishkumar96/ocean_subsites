@@ -2,7 +2,7 @@ import React from "react";
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
 import { FaPlay, FaPause } from "react-icons/fa";
-import { Waves, Wind, Navigation, Eye, BarChart3, Settings, Info } from "lucide-react";
+import { Waves, Navigation, Eye, BarChart3 } from "lucide-react";
 import Badge from 'react-bootstrap/Badge';
 import FancyIcon from '../components/FancyIcon';
 import './timeseries_scroll.css';
@@ -69,8 +69,6 @@ const legendBox = {
 };
 
 export default function WaveForecastAccordion({
-  active,
-  onToggleActive,
   WAVE_FORECAST_LAYERS,
   selectedWaveForecast,
   setSelectedWaveForecast,
@@ -85,7 +83,6 @@ export default function WaveForecastAccordion({
   currentSliderDate,
 }) {
   // Debug logging temporarily disabled
-  // console.log("WaveForecastAccordion props:", { selectedWaveForecast, totalSteps, sliderIndex });
   // Get the legend URL from the selected layer (or sublayer if composite)
   const selectedLayer = WAVE_FORECAST_LAYERS.find(l => l.value === selectedWaveForecast);
   let legendUrl = "";
@@ -117,7 +114,6 @@ export default function WaveForecastAccordion({
           className="form-select form-select-sm"
           value={selectedWaveForecast}
           onChange={e => {
-            // console.log("Wave forecast selector changed:", e.target.value);
             setSelectedWaveForecast(e.target.value);
           }}
           style={smallSelect}
@@ -174,7 +170,6 @@ export default function WaveForecastAccordion({
           disabled={capTime.loading}
           step={1}
           onChange={e => {
-            // console.log("Time slider changed:", e.target.value);
             setSliderIndex(Number(e.target.value));
           }}
           style={smallRange}

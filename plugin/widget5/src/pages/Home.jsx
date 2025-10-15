@@ -59,8 +59,8 @@ const variableConfigMap = {
   tm02: () => worldClassViz.getAdaptiveWavePeriodConfig(20.0, "cookIslands"),
   tpeak: () => ({
     style: "default-scalar/psu-magma",
-    // Use actual server data range for Cook Islands peak wave period
-    colorscalerange: "9.985,13.68",
+    // Use full range starting from zero for peak wave period visualization
+    colorscalerange: "0,13.68",
     numcolorbands: 200,
     belowmincolor: "transparent",
     abovemaxcolor: "extend"
@@ -127,8 +127,8 @@ function CookIslandsForecast() {
         ...getWorldClassConfig('tpeak'),
         id: 5,
         wmsUrl: "https://gem-ncwms-hpc.spc.int/ncWMS/wms",
-        legendUrl: getWorldClassLegendUrl('tpeak', '9.985,13.68', 's'),
-        description: "Enhanced peak period analysis with actual data range (9.985-13.68s) using magma color gradation"
+        legendUrl: getWorldClassLegendUrl('tpeak', '0,13.68', 's'),
+        description: "Enhanced peak period analysis with full range (0-13.68s) using magma color gradation"
       }
     ];
   }, []);
@@ -137,7 +137,7 @@ function CookIslandsForecast() {
   const STATIC_LAYERS = useMemo(() => {
     return [
       {
-        label: "🌧️ Rarotonga Inundation",
+        label: "Rarotonga Inundation",
         value: "raro_inun/Band1",
         ...getWorldClassConfig('raro_inun'),
         id: 200,
@@ -181,6 +181,7 @@ function CookIslandsForecast() {
     totalSteps,
     currentSliderDate,
     mapInstance,
+    minIndex,
   } = useForecast(cookIslandsConfig);
 
   // Debug: Track state changes
@@ -190,7 +191,7 @@ function CookIslandsForecast() {
 
   return (
     <div style={widgetContainerStyle}>
-      <ModernHeader modelRunTime={capTime.start} />
+      <ModernHeader />
       <ForecastApp
         WAVE_FORECAST_LAYERS={dynamicLayers}
         ALL_LAYERS={ALL_LAYERS}
@@ -212,6 +213,8 @@ function CookIslandsForecast() {
         setBottomCanvasData={setBottomCanvasData}
         setShowBottomCanvas={setShowBottomCanvas}
         isUpdatingVisualization={isUpdatingVisualization}
+        minIndex={minIndex}
+
       />
 
       <LegendCleanup 
@@ -221,7 +224,19 @@ function CookIslandsForecast() {
       
       <BottomOffCanvas
         show={showBottomCanvas}
-        onHide={() => setShowBottomCanvas(false)}
+        onHide={() => {
+          setShowBottomCanvas(false);
+          // Remove any active markers when canvas is hidden
+          if (mapInstance?.current) {
+            mapInstance.current.eachLayer((layer) => {
+              const isCircleMarker = layer instanceof L.CircleMarker && layer.options?.color === '#ff6b35';
+              const isPinMarker = layer instanceof L.Marker && layer.options?.title === 'data-source-pin';
+              if (isCircleMarker || isPinMarker) {
+                mapInstance.current.removeLayer(layer);
+              }
+            });
+          }
+        }}
         data={bottomCanvasData}
       />
       <BottomBuoyOffCanvas

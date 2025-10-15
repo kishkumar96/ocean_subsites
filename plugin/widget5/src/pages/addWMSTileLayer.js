@@ -62,10 +62,10 @@ const addWMSTileLayer = (map, url, options = {}, handleShow) => {
             finalOptions.styles = 'default-scalar/psu-magma';
         }
         
-        // Ensure proper color scale range for Cook Islands tpeak data
+        // Ensure proper color scale range for Cook Islands tpeak data (full range from 0)
         if (!finalOptions.colorscalerange) {
-            finalOptions.colorscalerange = '9.985,13.68';
-            console.log('🌊 Setting Cook Islands tpeak color scale range: 9.985-13.68s');
+            finalOptions.colorscalerange = '0,13.68';
+            console.log('🌊 Setting Cook Islands tpeak color scale range: 0-13.68s');
         }
     }
 
@@ -74,7 +74,7 @@ const addWMSTileLayer = (map, url, options = {}, handleShow) => {
         // Ensure proper color scale range for inundation data
         if (!finalOptions.colorscalerange) {
             finalOptions.colorscalerange = '-0.05,1.63';
-            console.log('🌧️ Setting Rarotonga inundation color scale range: -0.05-1.63m');
+            console.log('Setting Rarotonga inundation color scale range: -0.05-1.63m');
         }
         // Ensure proper style for inundation visualization
         if (!finalOptions.styles) {

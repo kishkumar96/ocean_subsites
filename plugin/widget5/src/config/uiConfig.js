@@ -32,7 +32,7 @@ export const UI_CONFIG = {
 
   // Variable label mappings for consistent display
   VARIABLE_LABELS: {
-    '🌊 Significant Wave Height + Direction': 'Wave Height + Direction', // Composite layer with automatic direction overlay
+    ' Significant Wave Height + Direction': 'Wave Height + Direction', // Composite layer with automatic direction overlay
     'Mean Wave Period': 'Wave Period',
     'Peak Wave Period': 'Peak Period',
     'Wind U Component': 'Wind U',

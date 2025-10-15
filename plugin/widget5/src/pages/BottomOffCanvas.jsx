@@ -1,249 +1,175 @@
 import React, { useRef, useState, useEffect } from "react";
 import Offcanvas from "react-bootstrap/Offcanvas";
+import "./BottomOffCanvas.css";
 import Tabular from "./tabular.js";
 import Timeseries from "./timeseries.js";
-import MapPreview from "./map.js";
-import useMapContainerRect from "../hooks/useMapContainerRect";
 
-// ---- Variables & config shared between modules ----
-// BottomOffCanvas now works dynamically with available forecast data
 
-const FORECAST_VARIABLE_KEYS = ['hs', 'tm02', 'tpeak', 'dirm'];
+// ---- Variables & config for Cook Islands (adapted from Widget 1) ----
+const variableDefs = [
+  { key: "hs", label: "Wave{0-5/Bu/1}" },
+  { key: "tm02", label: "Mean Period{0-20/Rd/0}" },
+  { key: "tpeak", label: "Wave Period{0-20/Rd/0}" },
+  { key: "dirm", label: "Mean Wave Dir{0/dir}" },
+  { key: "dirp", label: "Wave direction{0/dir}" },
+  { key: "transp_x", label: "Wave Energy{calc/0-100/jet/0}" },
+  { key: "hs_p2", label: "Swell(m){0-5/Bu/1}" },
+  { key: "tp_p2", label: "Swell Period{0-25/Rd/0}" },
+  { key: "dirp_p2", label: "Swell Dir{0/dir}" },
+  { key: "hs_p3", label: "2.Swell (m) {0-5/Bu/1}" },
+  { key: "tp_p3", label: "2.Swell Period{0-25/Rd/0}" },
+  { key: "dirp_p3", label: "2. Swell Dir{0-5/dir}" },
+  { key: "hs_p1", label: "Wind wave(m){0-5/Bu/1}" },
+  { key: "tp_p1", label: "Wind wave period{0-25/Rd/0}" },
+  { key: "dirp_p1", label: "Wind wave dir{0-4/dir}" }
+];
 
-// ---- Centralized fetching helpers ----
-// Helper function to determine which WMS server to use for each variable
-function getServerConfigForVariable(layer) {
-  // Extract variable name from layer (handles both 'cook_forecast/dirm' and 'dirm' formats)
-  const variable = layer.includes('/') ? layer.split('/')[1] : layer;
-  
-  // Wave direction should use THREDDS server to match map visualization
-  if (variable === 'dirm') {
-    return {
-      url: 'https://gemthreddshpc.spc.int/thredds/wms/POP/model/country/spc/forecast/hourly/COK/Rarotonga_UGRID.nc',
-      layerName: 'dirm', // THREDDS uses simple layer name without dataset prefix
-      serverType: 'thredds'
-    };
+// ---- Centralized fetching helpers (Cook Islands) ----
+// Ensure BBOX is in lon,lat,lon,lat order for THREDDS (CRS:84)
+function normalizeBboxToLonLat(bboxStr) {
+  try {
+    if (!bboxStr || typeof bboxStr !== 'string') return bboxStr;
+    const parts = bboxStr.split(',').map(Number);
+    if (parts.length !== 4 || parts.some(n => Number.isNaN(n))) return bboxStr;
+    const [a, b, c, d] = parts;
+    // Heuristic: if first is latitude (<=90 in magnitude) and second looks like longitude (>90 in magnitude for our AOI), then it's lat,lon order
+    const looksLatLon = Math.abs(a) <= 90 && Math.abs(b) > 90;
+    if (looksLatLon) {
+      // Convert from latmin, lonmin, latmax, lonmax -> lonmin, latmin, lonmax, latmax
+      const reordered = [b, a, d, c];
+      return reordered.join(',');
+    }
+    // Otherwise assume it's already lon,lat
+    return bboxStr;
+  } catch {
+    return bboxStr;
   }
-  
-  // All other variables use ncWMS server
-  return {
-    url: 'https://gem-ncwms-hpc.spc.int/ncWMS/wms',
-    layerName: layer, // ncWMS uses full layer path like 'cook_forecast/hs'
-    serverType: 'ncwms'
-  };
 }
 
 async function fetchLayerTimeseries(layer, data) {
   if (!data || !data.bbox || (data.x === undefined && data.i === undefined) || (data.y === undefined && data.j === undefined)) return null;
   
-  let timeParam = '';
-  let filterWindowStart = null;
-  let filterWindowEnd = null;
+  // Strip dataset prefix if present (e.g., "cook_forecast/hs" -> "hs")
+  // THREDDS server doesn't use dataset prefixes in GetTimeseries requests
+  const cleanLayer = layer.includes('/') ? layer.split('/').pop() : layer;
+  
+  let timeParam = "";
   if (data.timeDimension) {
-    if (data.timeDimension.includes('/')) {
-      const [startIso, endIso] = data.timeDimension.split('/');
-      const parsedStart = startIso ? new Date(startIso) : null;
-      const parsedEnd = endIso ? new Date(endIso) : null;
-      if (parsedStart && !Number.isNaN(parsedStart.getTime())) {
-        filterWindowStart = new Date(parsedStart);
-        filterWindowStart.setMilliseconds(0);
-        const sevenDayEnd = new Date(filterWindowStart);
-        sevenDayEnd.setDate(sevenDayEnd.getDate() + 7);
-        if (parsedEnd && !Number.isNaN(parsedEnd.getTime()) && parsedEnd < sevenDayEnd) {
-          filterWindowEnd = new Date(parsedEnd);
-          filterWindowEnd.setMilliseconds(0);
-        } else {
-          filterWindowEnd = sevenDayEnd;
-        }
-        timeParam = `${filterWindowStart.toISOString()}/${filterWindowEnd.toISOString()}`;
-      } else {
+    if (data.timeDimension.includes("/")) {
+      timeParam = data.timeDimension;
+    } else {
+      try {
+        const start = new Date(data.timeDimension);
+        const end = new Date(start);
+        end.setDate(start.getDate() + 7);
+        timeParam = `${start.toISOString()}/${end.toISOString()}`;
+      } catch {
         timeParam = data.timeDimension;
       }
-    } else {
-      const center = new Date(data.timeDimension);
-      if (!Number.isNaN(center.getTime())) {
-        filterWindowStart = new Date(center);
-        filterWindowStart.setMilliseconds(0);
-        filterWindowEnd = new Date(center);
-        filterWindowEnd.setDate(filterWindowEnd.getDate() + 7);
-        timeParam = `${filterWindowStart.toISOString()}/${filterWindowEnd.toISOString()}`;
-      }
     }
   }
-  if (!timeParam) {
-    // Fallback to a small forward window from now to avoid server 500s
-    const now = new Date();
-    now.setMilliseconds(0);
-    const future = new Date(now);
-    future.setDate(future.getDate() + 7);
-    timeParam = `${now.toISOString()}/${future.toISOString()}`;
-    filterWindowStart = now;
-    filterWindowEnd = future;
-  }
-  
-  const pixelX = data.x !== undefined ? data.x : data.i;
-  const pixelY = data.y !== undefined ? data.y : data.j;
-  const width = data.width || 256;
-  const height = data.height || 256;
-  
-  // Get appropriate server configuration for this variable
-  const serverConfig = getServerConfigForVariable(layer);
-  
-  // Build GetTimeseries URL using the appropriate server and layer name
+  const x = data.x !== undefined ? data.x : data.i;
+  const y = data.y !== undefined ? data.y : data.j;
+  // Normalize bbox axis order for THREDDS (expects lon,lat when SRS=CRS:84)
+  const bbox = normalizeBboxToLonLat(data.bbox);
   const url =
-    serverConfig.url +
+    "https://gemthreddshpc.spc.int/thredds/wms/POP/model/country/spc/forecast/hourly/COK/Rarotonga_UGRID.nc" +
     `?REQUEST=GetTimeseries` +
-    `&VERSION=1.3.0` + // Required parameter
-    `&LAYERS=${serverConfig.layerName}` +
-    `&QUERY_LAYERS=${serverConfig.layerName}` +
-    `&BBOX=${data.bbox}` +
-    `&CRS=EPSG:4326` +
-    `&HEIGHT=${height}` +
-    `&WIDTH=${width}` +
-    `&I=${pixelX}` +
-    `&J=${pixelY}` +
-    `&TIME=${encodeURIComponent(timeParam)}` +
-    `&INFO_FORMAT=text/csv`; // CSV format works better than JSON for timeseries
-    
-  console.log(`🌊 Fetching timeseries for ${layer} using ${serverConfig.serverType.toUpperCase()} server:`, url);
-  
+    `&LAYERS=${cleanLayer}` +
+    `&QUERY_LAYERS=${cleanLayer}` +
+    `&BBOX=${encodeURIComponent(bbox)}` +
+    `&SRS=CRS:84` +
+    `&FEATURE_COUNT=5` +
+    `&HEIGHT=${data.height}` +
+    `&WIDTH=${data.width}` +
+    `&X=${x}` +
+    `&Y=${y}` +
+    `&STYLES=default/default` +
+    `&VERSION=1.1.1` +
+    (timeParam ? `&TIME=${encodeURIComponent(timeParam)}` : "") +
+    `&INFO_FORMAT=text/json`;
   try {
     const response = await fetch(url);
-    console.log('🌊 Raw GetTimeseries response:', response); // Log the response object
     if (!response.ok) {
-      const errorText = await response.text();
-      console.warn(`GetTimeseries failed (${response.status}): ${response.statusText} - ${errorText}`);
+      console.warn("GetTimeseries failed", { layer: cleanLayer, status: response.status, url });
       return null;
     }
-    const csvText = await response.text();
-    console.log('🌊 Received timeseries CSV:', csvText);
-    
-    if (!csvText) return null;
-
-    // Parse CSV response into structured data
-    const lines = csvText.split('\n').filter(line => line.trim() && !line.startsWith('#'));
-    if (lines.length < 2) return null;
-    
-    const headers = lines[0].split(',');
-    const timeseriesData = [];
-    const times = [];
-    const values = [];
-    const rawTimes = [];
-    const rawValues = [];
-    const rawSeries = [];
-    const effectiveStart = filterWindowStart instanceof Date && !Number.isNaN(filterWindowStart?.getTime())
-      ? filterWindowStart
-      : null;
-    const effectiveEnd = filterWindowEnd instanceof Date && !Number.isNaN(filterWindowEnd?.getTime())
-      ? filterWindowEnd
-      : (effectiveStart ? new Date(effectiveStart.getTime() + 7 * 24 * 60 * 60 * 1000) : null);
-
-    for (let i = 1; i < lines.length; i++) {
-      const row = lines[i].split(',');
-      if (row.length >= 2) {
-        const time = row[0];
-        const parsedValue = row[1] !== 'null' ? parseFloat(row[1]) : null;
-        const value = Number.isFinite(parsedValue) ? parsedValue : null;
-        rawTimes.push(time);
-        rawValues.push(value);
-        rawSeries.push({ time, value, unit: headers[1] });
-
-        const sampleDate = new Date(time);
-        const sampleTime = sampleDate instanceof Date ? sampleDate.getTime() : Number.NaN;
-        const isValidSample = Number.isFinite(sampleTime);
-        const withinStart = !effectiveStart || (isValidSample && sampleTime >= effectiveStart.getTime());
-        const withinEnd = !effectiveEnd || (isValidSample && sampleTime <= effectiveEnd.getTime());
-
-        if (isValidSample && withinStart && withinEnd) {
-          times.push(time);
-          values.push(value);
-          timeseriesData.push({ time, value, unit: headers[1] });
-        }
-      }
+    const json = await response.json();
+    if (!json || !json.ranges || !json.domain) {
+      console.warn("GetTimeseries returned empty payload", { layer: cleanLayer, url });
     }
-
-    if (times.length === 0 && rawTimes.length > 0) {
-      rawTimes.forEach((time, index) => {
-        const value = rawValues[index];
-        times.push(time);
-        values.push(value);
-        timeseriesData.push(rawSeries[index]);
-      });
-    }
-
-    // Convert to coverage format expected by Tabular/Timeseries components
-    console.log('🔄 Converting CSV to coverage format:', { layer, timesLength: times.length, valuesLength: values.length });
-    
-    const coverage = {
-      type: "Coverage",
-      domain: {
-        type: "Domain",
-        domainType: "PointSeries",
-        axes: {
-          t: {
-            values: times
-          }
-        }
-      },
-      ranges: {}
-    };
-    
-    // Add the variable data as a range (use variable name, not full layer path)
-    const variableName = layer.includes('/') ? layer.split('/')[1] : layer;
-    coverage.ranges[variableName] = {
-      type: "NdArray",
-      dataType: "float",
-      values: values
-    };
-    
-    console.log('✅ Created coverage format:', coverage);
-    
-    return {
-      layer,
-      data: timeseriesData,
-      headers,
-      csvText,
-      coverage  // This is what the components actually need
-    };
-  } catch (error) {
-    console.error('GetTimeseries request failed:', error);
+    return json;
+  } catch {
     return null;
   }
 }
 
-const MIN_HEIGHT = 180;
-const MAX_HEIGHT = 800;
+const DEFAULT_MIN_HEIGHT = 100;
+const DEFAULT_MAX_HEIGHT = 800;
 
 const tabLabels = [
   { key: "tabular", label: "Tabular" },
-  { key: "timeseries", label: "Timeseries" },
-  { key: "map", label: "Map" }
+  { key: "timeseries", label: "Timeseries" }
 ];
 
-// This is a conceptual change. The data fetching logic in the main useEffect
-// should be extracted into a custom hook like `useForecastData(data)`.
-// const { perVariableData, loading, fetchError } = useForecastData(data);
-
 function BottomOffCanvas({ show, onHide, data }) {
-  const [height, setHeight] = useState(500);
+  const [height, setHeight] = useState(() => {
+    if (typeof window === "undefined") return 500;
+    const viewportMax = Math.max(DEFAULT_MIN_HEIGHT, window.innerHeight - 120);
+    return Math.min(500, viewportMax);
+  });
+  const [maxHeight, setMaxHeight] = useState(() => {
+    if (typeof window === "undefined") return DEFAULT_MAX_HEIGHT;
+    return Math.max(DEFAULT_MIN_HEIGHT, window.innerHeight - 120);
+  });
   const [activeTab, setActiveTab] = useState("tabular");
   const [perVariableData, setPerVariableData] = useState({});
   const [loading, setLoading] = useState(false);
   const [fetchError, setFetchError] = useState("");
-  const [portalTarget, setPortalTarget] = useState(null);
-  const mapRect = useMapContainerRect(show);
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  const minHeight = DEFAULT_MIN_HEIGHT;
+
+  // Check for dark mode
+  useEffect(() => {
+    const checkTheme = () => {
+      const isDark = document.body.classList.contains('dark-mode');
+      setIsDarkMode(isDark);
+    };
+    
+    checkTheme();
+    
+    // Listen for theme changes
+    const observer = new MutationObserver(checkTheme);
+    observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+    
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
-    if (typeof document !== "undefined") {
-      setPortalTarget(document.body);
+    const computeMax = () => {
+      if (typeof window === "undefined") return DEFAULT_MAX_HEIGHT;
+      return Math.max(minHeight, window.innerHeight - 120);
+    };
+    const handleResize = () => setMaxHeight(computeMax());
+    setMaxHeight(computeMax());
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [minHeight]);
+
+  useEffect(() => {
+    if (height > maxHeight) {
+      setHeight(maxHeight);
+    } else if (height < minHeight) {
+      setHeight(minHeight);
     }
-  }, []);
+  }, [height, maxHeight, minHeight]);
 
   // Drag handle logic
   const dragging = useRef(false);
   const startY = useRef(0);
-  const startHeight = useRef(500);
+  const startHeight = useRef(height);
   const onMouseDown = (e) => {
+    e.preventDefault();
     dragging.current = true;
     startY.current = e.clientY;
     startHeight.current = height;
@@ -254,165 +180,71 @@ function BottomOffCanvas({ show, onHide, data }) {
   const onMouseMove = (e) => {
     if (!dragging.current) return;
     let newHeight = startHeight.current - (e.clientY - startY.current);
-    newHeight = Math.min(Math.max(newHeight, MIN_HEIGHT), MAX_HEIGHT);
+    newHeight = Math.min(Math.max(newHeight, minHeight), maxHeight);
+    console.log(`[BottomCanvas] MouseMove: startHeight=${startHeight.current}, clientY=${e.clientY}, startY=${startY.current}, newHeight=${newHeight}, minHeight=${minHeight}, maxHeight=${maxHeight}`);
     setHeight(newHeight);
+    console.log(`[BottomCanvas] height: ${Math.round(newHeight)}px`);
   };
   const onMouseUp = () => {
     dragging.current = false;
     document.body.style.cursor = "";
     document.removeEventListener("mousemove", onMouseMove);
     document.removeEventListener("mouseup", onMouseUp);
+    console.log(`[BottomCanvas] resize end height: ${Math.round(height)}px`);
   };
 
-  // Process the passed data and create dynamic variable data
+  // Centralized network fetching
   useEffect(() => {
     let isMounted = true;
-    if (!data) {
+    if (!data || !data.bbox || (data.x === undefined && data.i === undefined) || (data.y === undefined && data.j === undefined)) {
       setPerVariableData({});
       setFetchError("No data available");
       return;
     }
-    
     setLoading(true);
     setFetchError("");
-    
-    // Create dynamic data based on the current layer being sampled
-    const processCurrentLayerData = async () => {
+    (async () => {
       const out = {};
-      const layerName = data.layerName || '';
-      const hasDataset = layerName.includes('/');
-      const [datasetName, variableKey] = hasDataset
-        ? layerName.split('/')
-        : [null, layerName];
-      const availableVariables = FORECAST_VARIABLE_KEYS;
-      const shouldFetchVariableFamily = datasetName && FORECAST_VARIABLE_KEYS.includes(variableKey);
-
-      console.log('🎯 Processing layer data:', {
-        layerName,
-        datasetName,
-        variableKey,
-        hasLayerName: !!data.layerName,
-        hasBbox: !!data.bbox,
-        bboxValue: data.bbox
-      });
-      console.log('🎯 Data structure:', {
-        hasFeatureInfo: !!data.featureInfo,
-        featureInfo: data.featureInfo,
-        hasBbox: !!data.bbox,
-        bbox: data.bbox
-      });
-
-      const layersToFetch = [];
-      
-      // Special handling for composite layer - fetch both wave height and direction
-      if (layerName === 'world_class_composite_hs_dirm' && data.bbox) {
-        console.log('🌊 Detected composite layer, fetching both hs and dirm');
-        layersToFetch.push('cook_forecast/hs');  // Wave height from ncWMS
-        layersToFetch.push('dirm');              // Direction from THREDDS (will be handled by getServerConfigForVariable)
-      } else if (shouldFetchVariableFamily && data.bbox) {
-        availableVariables.forEach(variable => {
-          layersToFetch.push(`${datasetName}/${variable}`);
-        });
-      } else if (layerName && data.bbox) {
-        layersToFetch.push(layerName);
+      let transpX, transpY;
+      for (let i = 0; i < variableDefs.length; i++) {
+        const { key } = variableDefs[i];
+        if (key === "transp_x") {
+          // Only fetch both transp_x and transp_y ONCE
+          transpX = await fetchLayerTimeseries("transp_x", data);
+          transpY = await fetchLayerTimeseries("transp_y", data);
+          out["transp_x"] = transpX;
+          out["transp_y"] = transpY;
+        } else if (key === "transp_y") {
+          continue;
+        } else {
+          out[key] = await fetchLayerTimeseries(key, data);
+        }
       }
-
-      const uniqueLayers = Array.from(new Set(layersToFetch));
-      console.log('🎯 Layers to fetch:', uniqueLayers);
-
-      if (data.bbox && uniqueLayers.length > 0) {
-        const fetchPromises = uniqueLayers.map(async layerId => {
-          const key = layerId.includes('/') ? layerId.split('/')[1] : layerId;
-          try {
-            console.log('🚀 Fetching timeseries for:', { layerId, key });
-            const layerData = await fetchLayerTimeseries(layerId, data);
-            console.log('📦 Received layerData:', { layerId, key, hasCoverage: !!(layerData && layerData.coverage) });
-
-            if (layerData && layerData.coverage) {
-              out[key] = layerData.coverage;
-            } else {
-              console.warn('❌ No coverage data found in layerData:', { layerId, layerData });
-            }
-          } catch (error) {
-            console.log(`Could not fetch timeseries for ${layerId}:`, error);
-          }
-        });
-
-        await Promise.all(fetchPromises);
-      }
-
-      if (variableKey && !out[variableKey] && data.featureInfo && data.featureInfo !== "Loading..." && data.featureInfo !== "No Data") {
-        console.log('🎯 Using current point data as fallback for selected variable:', data.featureInfo);
-        const currentTime = new Date().toISOString();
-        const pointData = {
-          domain: {
-            domainType: "PointSeries",
-            axes: {
-              t: { values: [currentTime] }
-            }
-          },
-          ranges: {
-            [variableKey]: {
-              type: "NdArray",
-              dataType: "float",
-              values: [parseFloat(data.featureInfo) || 0]
-            }
-          }
-        };
-
-        out[variableKey] = pointData;
-      }
-
       if (!isMounted) return;
-
-      console.log('🎯 Final perVariableData being set:', out);
-      console.log('🎯 Keys in perVariableData:', Object.keys(out));
-
       setPerVariableData(out);
       setLoading(false);
-
-      if (Object.keys(out).length === 0) {
-        setFetchError("No forecast data available for current location.");
-      } else {
-        console.log('✅ PerVariableData set successfully with', Object.keys(out).length, 'variables');
-      }
-    };
-    
-    processCurrentLayerData();
+      if (Object.values(out).every(x => !x)) setFetchError("No data returned from server.");
+    })();
     return () => { isMounted = false; };
   }, [data]);
-
-  const resolvedHeight = Math.min(Math.max(height, MIN_HEIGHT), MAX_HEIGHT);
-  const offcanvasWidth = mapRect ? `${mapRect.width}px` : "100vw";
-  const offcanvasLeft = mapRect ? `${mapRect.left}px` : "0";
-  const offcanvasRight = mapRect ? "auto" : "0";
-  const offcanvasMargin = mapRect ? "0" : "0 auto";
 
   return (
     <Offcanvas
       show={show}
       onHide={onHide}
       placement="bottom"
-      container={portalTarget}
+      className="bottom-offcanvas"
       style={{
-        '--bs-offcanvas-height': `${resolvedHeight}px`,
-        height: `${resolvedHeight}px`, // Use actual height instead of 'auto'
-        top: 'auto',
-        bottom: 0,
-        zIndex: 12000, // ensure above map + UI chrome
-        background: "rgba(10, 36, 99, 0.95)", // Dark blue, semi-transparent
-        backdropFilter: "blur(8px)",
-        color: "#e2e8f0", // Light text color for readability
-        overflow: "hidden",
-        transition: "height 0.2s ease-out", // Smoother transition
-        borderTop: `1px solid rgba(144, 224, 239, 0.3)`, // Subtle cyan border
-        left: offcanvasLeft,
-        right: offcanvasRight,
-        width: offcanvasWidth,
-        margin: offcanvasMargin,
-        maxHeight: "90vh",
-        minHeight: `${MIN_HEIGHT}px`,
-        resize: 'none' // Disable default resize, we handle it with drag
+        // Ensure Bootstrap offcanvas-bottom respects dynamic height
+        height,
+        maxHeight,
+        "--bs-offcanvas-height": `${Math.round(height)}px`,
+        zIndex: 15000,
+        background: isDarkMode ? "rgba(63, 72, 84, 0.98)" : "rgba(255,255,255,0.98)",
+        color: isDarkMode ? "#f1f5f9" : "#1e293b",
+        overflow: "visible",
+        transition: "height 0.1s",
+        borderTop: `1px solid ${isDarkMode ? "#44454a" : "#e2e8f0"}`,
       }}
       backdrop={false}
       scroll={true}
@@ -420,23 +252,51 @@ function BottomOffCanvas({ show, onHide, data }) {
       {/* Drag Handle */}
       <div
         style={{
-          height: 12,
+          height: 16,
           cursor: "ns-resize",
-          background: "rgba(255, 255, 255, 0.1)",
+          background: isDarkMode ? "#44454a" : "#e0e0e0",
           borderTopLeftRadius: 8,
           borderTopRightRadius: 8,
           textAlign: "center",
           userSelect: "none",
           margin: "-8px 0 0 0",
+          position: "relative",
+          zIndex: 15002,
         }}
         onMouseDown={onMouseDown}
+        onTouchStart={(e) => {
+          e.preventDefault();
+          if (!e.touches || !e.touches.length) return;
+          dragging.current = true;
+          startY.current = e.touches[0].clientY;
+          startHeight.current = height;
+          document.body.style.cursor = "ns-resize";
+          const onTouchMove = (ev) => {
+            ev.preventDefault();
+            if (!dragging.current || !ev.touches || !ev.touches.length) return;
+            let newHeight = startHeight.current - (ev.touches[0].clientY - startY.current);
+            newHeight = Math.min(Math.max(newHeight, minHeight), maxHeight);
+            console.log(`[BottomCanvas] TouchMove: startHeight=${startHeight.current}, clientY=${ev.touches[0].clientY}, startY=${startY.current}, newHeight=${newHeight}, minHeight=${minHeight}, maxHeight=${maxHeight}`);
+            setHeight(newHeight);
+            console.log(`[BottomCanvas] height: ${Math.round(newHeight)}px`);
+          };
+          const onTouchEnd = () => {
+            dragging.current = false;
+            document.body.style.cursor = "";
+            document.removeEventListener("touchmove", onTouchMove);
+            document.removeEventListener("touchend", onTouchEnd);
+            console.log(`[BottomCanvas] resize end height: ${Math.round(height)}px`);
+          };
+          document.addEventListener("touchmove", onTouchMove, { passive: false });
+          document.addEventListener("touchend", onTouchEnd);
+        }}
         title="Drag to resize"
       >
         <div
           style={{
             width: 40,
             height: 4,
-            background: "rgba(255, 255, 255, 0.4)",
+            background: isDarkMode ? "#a1a1aa" : "#aaa",
             borderRadius: 2,
             margin: "4px auto",
           }}
@@ -445,7 +305,7 @@ function BottomOffCanvas({ show, onHide, data }) {
       <div style={{ 
         display: "flex", 
         alignItems: "center", 
-        borderBottom: `1px solid rgba(144, 224, 239, 0.2)`, 
+        borderBottom: `1px solid ${isDarkMode ? "#44454a" : "#eee"}`, 
         padding: "0 1rem 0 0.5rem" 
       }}>
         {/* Custom CSS Tabs */}
@@ -456,16 +316,17 @@ function BottomOffCanvas({ show, onHide, data }) {
               onClick={() => setActiveTab(tab.key)}
               style={{
                 border: "none",
-                borderBottom: activeTab === tab.key ? `2px solid #90e0ef` : "2px solid transparent",
+                borderBottom: activeTab === tab.key ? `2px solid ${isDarkMode ? "#60a5fa" : "#007bff"}` : "2px solid transparent",
                 background: "none",
                 padding: "8px 20px",
                 marginRight: 8,
-                fontWeight: activeTab === tab.key ? "600" : "400",
-                color: activeTab === tab.key ? "#90e0ef" : "#cbd5e1",
+                fontWeight: activeTab === tab.key ? "bold" : "normal",
+                color: activeTab === tab.key ? (isDarkMode ? "#60a5fa" : "#007bff") : (isDarkMode ? "#a1a1aa" : "#555"),
                 cursor: "pointer",
                 fontSize: 16,
                 transition: "border-bottom 0.1s"
               }}
+
               aria-controls={`tab-panel-${tab.key}`}
               tabIndex={activeTab === tab.key ? 0 : -1}
               type="button"
@@ -483,7 +344,7 @@ function BottomOffCanvas({ show, onHide, data }) {
             background: "none",
             fontSize: 26,
             marginLeft: 8,
-            color: "#94a3b8",
+            color: isDarkMode ? "#a1a1aa" : "#666",
             cursor: "pointer",
             lineHeight: 1,
           }}
@@ -491,41 +352,15 @@ function BottomOffCanvas({ show, onHide, data }) {
           ×
         </button>
       </div>
-      <Offcanvas.Body style={{ 
-        paddingTop: 16, 
-        height: `calc(${resolvedHeight}px - 60px)`, // Account for header height
-        overflow: 'auto',
-        display: 'flex',
-        flexDirection: 'column'
-      }}>
+      <Offcanvas.Body style={{ paddingTop: 16 }}>
         {loading
           ? <div style={{ textAlign: "center", padding: "2rem" }}>Loading data...</div>
           : fetchError
               ? <div style={{ color: "red", textAlign: "center" }}>{fetchError}</div>
               : <>
-                  <div style={{ 
-                    display: activeTab === 'tabular' ? 'flex' : 'none',
-                    flex: 1,
-                    overflow: 'auto'
-                  }}>
-                    <Tabular perVariableData={perVariableData} />
-                  </div>
-                  <div style={{ 
-                    display: activeTab === 'timeseries' ? 'flex' : 'none',
-                    flex: 1,
-                    overflow: 'auto'
-                  }}>
-                    <Timeseries perVariableData={perVariableData} />
-                  </div>
-                  {/*
-                    Conditionally mount MapPreview ONLY when its tab is active.
-                    Returning null ensures the component is fully unmounted, preventing Leaflet instance conflicts.
-                  */}
-                  {activeTab === 'map' ? (
-                    <div style={{ flex: 1, overflow: 'hidden' }}>
-                      <MapPreview data={data} />
-                    </div>
-                  ) : null}
+                  {activeTab === "tabular" && <Tabular perVariableData={perVariableData} />}
+                  {activeTab === "timeseries" && <Timeseries perVariableData={perVariableData} />}
+                  
                 </>
         }
       </Offcanvas.Body>

@@ -36,7 +36,8 @@ export const useForecast = (config) => {
     setIsPlaying,
     totalSteps,
     currentSliderDate,
-    currentSliderDateStr
+    currentSliderDateStr,
+    minIndex
   } = timeAnimation;
 
   // 4. UI State (canvas visibility, drag state, responsive layout)
@@ -101,6 +102,7 @@ export const useForecast = (config) => {
     isPlaying,
     setIsPlaying,
     currentSliderDate,
+    minIndex,
     
     // Map & Rendering
     mapRef,

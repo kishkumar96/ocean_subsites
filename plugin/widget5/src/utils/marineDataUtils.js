@@ -74,6 +74,13 @@ export const getCompassDirection = (degrees) => {
   return COMPASS_DIRECTIONS[index];
 };
 
+// Get the opposite compass direction (for showing where waves are going TO)
+export const getOppositeCompassDirection = (degrees) => {
+  if (degrees === null || degrees === undefined || isNaN(degrees)) return '';
+  const oppositeDegrees = ((degrees + 180) % 360);
+  return getCompassDirection(oppositeDegrees);
+};
+
 // Extract coverage timeseries with better error handling
 export const extractCoverageTimeseries = (json, variable) => {
   try {
@@ -137,15 +144,13 @@ export const formatTableTime = (timeStr) => {
       return timeStr;
     }
     
-    const day = date.getUTCDate().toString().padStart(2, '0');
-    const month = (date.getUTCMonth() + 1).toString().padStart(2, '0');
-    const hour = date.getUTCHours().toString().padStart(2, '0');
+    // Format exactly like Niue: Day-of-week / Day number / Hour
+    const days = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+    const dayCode = days[date.getDay()];
+    const dayNum = String(date.getDate());
+    const hour = `${String(date.getHours()).padStart(2, '0')}hr`;
     
-    // Cook Islands is UTC-10
-    const cookIslandsDate = new Date(date.getTime() - 10 * 60 * 60 * 1000);
-    const localHour = cookIslandsDate.getUTCHours().toString().padStart(2, '0');
-    
-    return `${day}/${month}\n${hour}:00 UTC\n${localHour}:00 CKT`;
+    return `${dayCode}\n${dayNum}\n${hour}`;
   } catch (error) {
     console.warn('Invalid time format:', timeStr, error);
     return timeStr;

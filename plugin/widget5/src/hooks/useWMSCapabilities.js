@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { MARINE_CONFIG } from '../config/marineVariables';
 
 /**
  * Hook for fetching and managing WMS capabilities
@@ -9,7 +10,8 @@ export const useWMSCapabilities = (selectedLayer, allLayers) => {
     loading: true, 
     start: new Date(), 
     end: new Date(), 
-    stepHours: 1 
+    stepHours: 1,
+    originalStart: new Date() // Add originalStart to initial state
   });
 
   useEffect(() => {
@@ -45,7 +47,8 @@ export const useWMSCapabilities = (selectedLayer, allLayers) => {
             end: new Date(),
             stepHours: 1,
             totalSteps: 0,
-            availableTimestamps: []
+            availableTimestamps: [],
+            originalStart: new Date() // Add for consistency
           });
           return;
         }
@@ -123,18 +126,23 @@ export const useWMSCapabilities = (selectedLayer, allLayers) => {
         
         console.log(`🕒 Time dimension for ${capsLayer.value}:`, timeDim.raw);
         
-        const timeInfo = getTimeRangeFromDimension(timeDim.raw) || {};
-        
-        if (timeInfo.availableTimestamps) {
-          console.log(`📅 Found ${timeInfo.availableTimestamps.length} available timestamps for ${capsLayer.value}`);
-          console.log(`📅 First timestamp: ${timeInfo.availableTimestamps[0]?.toISOString()}`);
-          console.log(`📅 Last timestamp: ${timeInfo.availableTimestamps[timeInfo.availableTimestamps.length - 1]?.toISOString()}`);
-        }
         const timeRange = getTimeRangeFromDimension(timeDim.raw);
         if (!timeRange) throw new Error("Could not parse time dimension.");
         
-        const { start, end, stepHours, availableTimestamps } = timeRange;
+        const { start, end, stepHours, availableTimestamps, originalStart } = timeRange;
         const newTotalSteps = availableTimestamps ? availableTimestamps.length - 1 : 0;
+        
+        if (availableTimestamps) {
+          console.log(`📅 Found ${availableTimestamps.length} available timestamps for ${capsLayer.value}`);
+          console.log(`📅 First timestamp: ${availableTimestamps[0]?.toISOString()}`);
+          console.log(`📅 Last timestamp: ${availableTimestamps[availableTimestamps.length - 1]?.toISOString()}`);
+        }
+        
+        console.log(`⏰ Time Range Parsed:`);
+        console.log(`   Original Start (Model Run): ${originalStart?.toISOString()}`);
+        console.log(`   Adjusted Start (After Skips): ${start?.toISOString()}`);
+        console.log(`   End: ${end?.toISOString()}`);
+        console.log(`   Total Steps: ${newTotalSteps}`);
         
         setCapTime({
           loading: false,
@@ -142,7 +150,8 @@ export const useWMSCapabilities = (selectedLayer, allLayers) => {
           end: end || new Date(),
           stepHours: stepHours || 6,
           totalSteps: newTotalSteps,
-          availableTimestamps: availableTimestamps || []
+          availableTimestamps: availableTimestamps || [],
+          originalStart: originalStart || start || new Date() // Store original model run time
         });
       } catch (error) {
         console.error("Error fetching capabilities:", error.message);
@@ -251,6 +260,10 @@ const parseTimeDimensionFromCapabilities = (xml, layerName) => {
 const getTimeRangeFromDimension = (timeDimString) => {
   if (!timeDimString) return null;
   
+  // ✅ Configuration: Skip warm-up period (model initialization with unreliable data)
+  const WARMUP_DAYS = MARINE_CONFIG.WARMUP_DAYS;
+  const ENABLE_WARMUP_SKIP = MARINE_CONFIG.ENABLE_WARMUP_SKIP;
+  
   try {
     // Handle comma-separated individual timestamps
     if (timeDimString.includes(',')) {
@@ -261,11 +274,63 @@ const getTimeRangeFromDimension = (timeDimString) => {
         .sort((a, b) => a.getTime() - b.getTime());
       
       if (validTimestamps.length > 0) {
+        // ✅ Infer model run time: First timestamp might be +6h forecast, not model run (T+0)
+        // Calculate step size from first two timestamps
+        let stepMillis = 6 * 60 * 60 * 1000; // Default 6 hours
+        if (validTimestamps.length > 1) {
+          stepMillis = validTimestamps[1].getTime() - validTimestamps[0].getTime();
+        }
+        
+        // Model run time = first available timestamp - step size
+        const firstAvailable = validTimestamps[0];
+        const inferredModelRunTime = new Date(firstAvailable.getTime() - stepMillis);
+        
+        console.log(`🎯 Inferring model run time:`);
+        console.log(`   First available: ${firstAvailable.toISOString()}`);
+        console.log(`   Step size: ${stepMillis / (60 * 60 * 1000)} hours`);
+        console.log(`   Inferred model run: ${inferredModelRunTime.toISOString()}`);
+        
+        const originalStart = firstAvailable; // For warm-up calculations, use first available
+        const originalEnd = validTimestamps[validTimestamps.length - 1];
+        
+        // ✅ Skip warm-up period if enabled
+        let filteredTimestamps = validTimestamps;
+        let actualStart = originalStart;
+        
+        if (ENABLE_WARMUP_SKIP && WARMUP_DAYS > 0) {
+          const warmupCutoff = new Date(originalStart.getTime() + WARMUP_DAYS * 24 * 60 * 60 * 1000);
+          filteredTimestamps = validTimestamps.filter(t => t >= warmupCutoff);
+          
+          if (filteredTimestamps.length > 0) {
+            actualStart = filteredTimestamps[0];
+            console.log(`🌊 Skipping ${WARMUP_DAYS}-day warm-up period for model spin-up`);
+            console.log(`   Original start: ${originalStart.toISOString()}`);
+            console.log(`   Reliable data start: ${actualStart.toISOString()}`);
+            console.log(`   Removed ${validTimestamps.length - filteredTimestamps.length} warm-up timestamps`);
+          } else {
+            console.warn(`⚠️ Warm-up skip would remove all timestamps, keeping original range`);
+            filteredTimestamps = validTimestamps;
+            actualStart = originalStart;
+          }
+        }
+        
+        // ✅ Skip first timestep (0-hour) if enabled - often analysis/nowcast, not forecast
+        if (MARINE_CONFIG.SKIP_FIRST_TIMESTEP && filteredTimestamps.length > 1) {
+          console.log(`🎯 Skipping 0-hour timestep (analysis/nowcast)`);
+          console.log(`   Removed timestamp: ${filteredTimestamps[0].toISOString()}`);
+          filteredTimestamps = filteredTimestamps.slice(1); // Remove first timestamp
+          actualStart = filteredTimestamps[0];
+          console.log(`   New start: ${actualStart.toISOString()}`);
+        }
+        
         return {
-          start: validTimestamps[0],
-          end: validTimestamps[validTimestamps.length - 1],
+          start: actualStart,
+          end: originalEnd,
           step: 'PT1H', // Default step
-          availableTimestamps: validTimestamps
+          availableTimestamps: filteredTimestamps,
+          originalStart: inferredModelRunTime, // ✅ Use inferred model run time (T+0)
+          warmupDays: ENABLE_WARMUP_SKIP ? WARMUP_DAYS : 0,
+          warmupSkipped: ENABLE_WARMUP_SKIP && filteredTimestamps.length < validTimestamps.length
         };
       }
     }
@@ -274,26 +339,63 @@ const getTimeRangeFromDimension = (timeDimString) => {
     if (timeDimString.includes('/')) {
       const parts = timeDimString.split('/');
       if (parts.length >= 2) {
-        const start = new Date(parts[0]);
+        const originalStart = new Date(parts[0]);
         const end = new Date(parts[1]);
         const step = parts[2] || 'PT6H'; // Default to 6 hours for marine forecast
         
-        if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
-          // Generate available timestamps for range format every 6 hours
+        if (!isNaN(originalStart.getTime()) && !isNaN(end.getTime())) {
+          // ✅ Calculate warm-up cutoff
+          let actualStart = originalStart;
+          if (ENABLE_WARMUP_SKIP && WARMUP_DAYS > 0) {
+            const warmupCutoff = new Date(originalStart.getTime() + WARMUP_DAYS * 24 * 60 * 60 * 1000);
+            
+            // Only apply if cutoff is before end date
+            if (warmupCutoff < end) {
+              actualStart = warmupCutoff;
+              console.log(`🌊 Skipping ${WARMUP_DAYS}-day warm-up period for range format`);
+              console.log(`   Original start: ${originalStart.toISOString()}`);
+              console.log(`   Reliable data start: ${actualStart.toISOString()}`);
+            } else {
+              console.warn(`⚠️ Warm-up skip would exceed end date, keeping original range`);
+            }
+          }
+          
+          // Generate available timestamps starting from actual start (after warm-up if enabled)
           const stepHours = getStepHours(step);
           const availableTimestamps = [];
-          let current = new Date(start);
+          let current = new Date(actualStart);
           
-          console.log(`🌊 Generating 6-hour timestamps from ${start.toISOString()} to ${end.toISOString()}, step: ${stepHours}h`);
+          console.log(`🌊 Generating timestamps from ${actualStart.toISOString()} to ${end.toISOString()}, step: ${stepHours}h`);
           
           while (current <= end) {
             availableTimestamps.push(new Date(current));
             current = new Date(current.getTime() + stepHours * 60 * 60 * 1000);
           }
           
-          console.log(`🌊 Generated ${availableTimestamps.length} available timestamps (6-hour intervals)`);
+          console.log(`🌊 Generated ${availableTimestamps.length} available timestamps`);
           
-          return { start, end, step, stepHours, availableTimestamps };
+          // ✅ Skip first timestep (0-hour) if enabled - often analysis/nowcast, not forecast
+          let finalTimestamps = availableTimestamps;
+          let finalStart = actualStart;
+          
+          if (MARINE_CONFIG.SKIP_FIRST_TIMESTEP && availableTimestamps.length > 1) {
+            console.log(`🎯 Skipping 0-hour timestep (analysis/nowcast)`);
+            console.log(`   Removed timestamp: ${availableTimestamps[0].toISOString()}`);
+            finalTimestamps = availableTimestamps.slice(1);
+            finalStart = finalTimestamps[0];
+            console.log(`   New start: ${finalStart.toISOString()}`);
+          }
+          
+          return { 
+            start: finalStart,
+            end, 
+            step, 
+            stepHours, 
+            availableTimestamps: finalTimestamps,
+            originalStart: originalStart,
+            warmupDays: ENABLE_WARMUP_SKIP ? WARMUP_DAYS : 0,
+            warmupSkipped: ENABLE_WARMUP_SKIP && actualStart > originalStart
+          };
         }
       }
     }

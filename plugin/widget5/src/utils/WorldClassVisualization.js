@@ -395,7 +395,7 @@ class WorldClassVisualization {
    */
   getWorldClassCompositeConfig() {
     return {
-      label: "🌊 Significant Wave Height + Direction",
+      label: "Significant Wave Height + Direction",
       value: "world_class_composite_hs_dirm",
       id: 999,
       composite: true,

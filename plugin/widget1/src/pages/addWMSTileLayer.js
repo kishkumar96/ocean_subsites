@@ -178,7 +178,7 @@ const addWMSTileLayer = (map, url, options = {}, handleShow) => {
             <a href="#" class="open-timeseries-link" style="display: block;">&nbsp;more...</a>
         `;
 
-        const popup = L.popup({ maxWidth: 800 })
+        L.popup({ maxWidth: 800 })
             .setLatLng(latlng)
             .setContent(popupContent)
             .openOn(map);

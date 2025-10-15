@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Widget Color Comparison</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .comparison { display: flex; gap: 30px; }
+        .widget { flex: 1; }
+        .color-row { display: flex; margin: 5px 0; }
+        .color-sample { width: 50px; height: 30px; margin-right: 10px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; }
+        .label { display: flex; align-items: center; }
+        h2 { color: #333; }
+        h3 { margin-top: 20px; color: #666; }
+    </style>
+</head>
+<body>
+    <h1>🎨 Widget Color Coding Comparison</h1>
+    
+    <div class="comparison">
+        <div class="widget">
+            <h2>Widget1 (Niue) - Original</h2>
+            
+            <h3>🔵 Blue (Wave Heights) - Range: 0-5m</h3>
+            <div id="widget1-blue"></div>
+            
+            <h3>🔴 Red (Wave Periods) - Range: 0-20s</h3>
+            <div id="widget1-red"></div>
+            
+            <h3>🌈 Jet (Wave Energy) - Range: 0-100 kW/m</h3>
+            <div id="widget1-jet"></div>
+        </div>
+        
+        <div class="widget">
+            <h2>Widget5 (Cook Islands) - Enhanced</h2>
+            
+            <h3>🔵 Blue (Wave Heights) - Range: 0-5m</h3>
+            <div id="widget5-blue"></div>
+            
+            <h3>🔴 Red (Wave Periods) - Range: 0-20s</h3>
+            <div id="widget5-red"></div>
+            
+            <h3>🌈 Jet (Wave Energy) - Range: 0-100 kW/m</h3>
+            <div id="widget5-jet"></div>
+        </div>
+    </div>
+
+    <script>
+        // Widget1 color functions (original)
+        function widget1_jetColor(value, min = 0, max = 4) {
+          let v = Math.max(min, Math.min(max, value));
+          v = (v - min) / (max - min);
+          let r = Math.floor(255 * Math.max(Math.min(1.5 - Math.abs(4 * v - 3), 1), 0));
+          let g = Math.floor(255 * Math.max(Math.min(1.5 - Math.abs(4 * v - 2), 1), 0));
+          let b = Math.floor(255 * Math.max(Math.min(1.5 - Math.abs(4 * v - 1), 1), 0));
+          if ([r, g, b].some(x => isNaN(x))) return "rgb(127,127,127)";
+          return `rgb(${r},${g},${b})`;
+        }
+        
+        function widget1_redColor(value, min = 0, max = 20) {
+          let v = Math.max(min, Math.min(max, value));
+          v = (v - min) / (max - min);
+          const start = { r: 255, g: 229, b: 229 };
+          const end = { r: 127, g: 0, b: 0 };
+          const r = Math.round(start.r + (end.r - start.r) * v);
+          const g = Math.round(start.g + (end.g - start.g) * v);
+          const b = Math.round(start.b + (end.b - start.b) * v);
+          return `rgb(${r},${g},${b})`;
+        }
+        
+        function widget1_blueColor(value, min = 0, max = 4) {
+          let v = Math.max(min, Math.min(max, value));
+          v = (v - min) / (max - min);
+          const start = { r: 232, g: 244, b: 255 };
+          const end = { r: 0, g: 51, b: 102 };
+          const r = Math.round(start.r + (end.r - start.r) * v);
+          const g = Math.round(start.g + (end.g - start.g) * v);
+          const b = Math.round(start.b + (end.b - start.b) * v);
+          return `rgb(${r},${g},${b})`;
+        }
+
+        // Widget5 color functions (enhanced - same as Widget1 but with better organization)
+        function widget5_jetColor(value, min = 0, max = 4) {
+          let v = Math.max(min, Math.min(max, value));
+          v = (v - min) / (max - min);
+          let r = Math.floor(255 * Math.max(Math.min(1.5 - Math.abs(4 * v - 3), 1), 0));
+          let g = Math.floor(255 * Math.max(Math.min(1.5 - Math.abs(4 * v - 2), 1), 0));
+          let b = Math.floor(255 * Math.max(Math.min(1.5 - Math.abs(4 * v - 1), 1), 0));
+          if ([r, g, b].some(x => isNaN(x))) return "rgb(127,127,127)";
+          return `rgb(${r},${g},${b})`;
+        }
+        
+        function widget5_redColor(value, min = 0, max = 20) {
+          let v = Math.max(min, Math.min(max, value));
+          v = (v - min) / (max - min);
+          const start = { r: 255, g: 229, b: 229 };
+          const end = { r: 127, g: 0, b: 0 };
+          const r = Math.round(start.r + (end.r - start.r) * v);
+          const g = Math.round(start.g + (end.g - start.g) * v);
+          const b = Math.round(start.b + (end.b - start.b) * v);
+          return `rgb(${r},${g},${b})`;
+        }
+        
+        function widget5_blueColor(value, min = 0, max = 5) {
+          let v = Math.max(min, Math.min(max, value));
+          v = (v - min) / (max - min);
+          const start = { r: 232, g: 244, b: 255 };
+          const end = { r: 0, g: 51, b: 102 };
+          const r = Math.round(start.r + (end.r - start.r) * v);
+          const g = Math.round(start.g + (end.g - start.g) * v);
+          const b = Math.round(start.b + (end.b - start.b) * v);
+          return `rgb(${r},${g},${b})`;
+        }
+
+        function isColorDark(colorString) {
+          if (!colorString) return false;
+          let r, g, b;
+          const rgbMatch = colorString.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/);
+          if (rgbMatch) {
+            [r, g, b] = rgbMatch.slice(1, 4).map(Number);
+          } else {
+            return false;
+          }
+          const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+          return brightness < 128;
+        }
+
+        // Generate color samples
+        function generateSamples(containerId, colorFunc, min, max, steps = 10) {
+            const container = document.getElementById(containerId);
+            for (let i = 0; i <= steps; i++) {
+                const value = min + (max - min) * (i / steps);
+                const color = colorFunc(value, min, max);
+                const textColor = isColorDark(color) ? '#fff' : '#000';
+                
+                const row = document.createElement('div');
+                row.className = 'color-row';
+                row.innerHTML = `
+                    <div class="color-sample" style="background-color: ${color}; color: ${textColor};">
+                        ${value.toFixed(1)}
+                    </div>
+                    <div class="label">${color}</div>
+                `;
+                container.appendChild(row);
+            }
+        }
+
+        // Widget1 samples
+        generateSamples('widget1-blue', widget1_blueColor, 0, 5, 10);
+        generateSamples('widget1-red', widget1_redColor, 0, 20, 10);
+        generateSamples('widget1-jet', widget1_jetColor, 0, 100, 10);
+
+        // Widget5 samples
+        generateSamples('widget5-blue', widget5_blueColor, 0, 5, 10);
+        generateSamples('widget5-red', widget5_redColor, 0, 20, 10);
+        generateSamples('widget5-jet', widget5_jetColor, 0, 100, 10);
+    </script>
+</body>
+</html>

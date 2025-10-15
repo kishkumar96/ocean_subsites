@@ -1,19 +1,23 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Home from './pages/Home';
 import './App.css';
 import Header from './components/header';
-import TokenError from './components/TokenError';
-import { validateTokenOnLoad, extractTokenFromURL } from './utils/tokenValidator';
+// import TokenError from './components/TokenError';  // 🚫 Disabled
+// import { validateTokenOnLoad, extractTokenFromURL } from './utils/tokenValidator';  // 🚫 Disabled
 
 function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [errorType, setErrorType] = useState(null);
-  const [widgetData, setWidgetData] = useState(null);
-  const [validCountries, setValidCountries] = useState([]);
+  // 🚫 TEMPORARILY DISABLED TOKEN AUTHENTICATION FOR TESTING
+  // const [isAuthenticated, setIsAuthenticated] = useState(true);  // ✅ Skip auth
+  // const [isLoading, setIsLoading] = useState(false);             // ✅ Skip loading
+  // const [errorType, setErrorType] = useState(null);
+  const widgetData = null;          // ✅ Fixed: removed unused setter
+  const validCountries = ['NIU'];   // ✅ Fixed: removed unused setter, default to Niue
 
   useEffect(() => {
+    // 🚫 COMMENTED OUT TOKEN VALIDATION - DIRECT ACCESS
+    console.log('🔓 Authentication temporarily disabled - direct access enabled');
+    /*
     const initializeApp = async () => {
       console.log('Initializing app with token and country validation...');
       
@@ -64,8 +68,11 @@ function App() {
     };
 
     initializeApp();
+    */
   }, []);
 
+  // 🚫 DISABLED LOADING AND ERROR STATES FOR TESTING
+  /*
   // Show loading state while validating token
   if (isLoading) {
     return (
@@ -96,6 +103,7 @@ function App() {
   if (!isAuthenticated || errorType) {
     return <TokenError errorType={errorType || 'invalid_token'} />;
   }
+  */
 
   return (
     <Router basename={process.env.PUBLIC_URL}>

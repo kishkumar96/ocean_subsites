@@ -257,7 +257,7 @@ function NiueForecast() {
     e.preventDefault();
   };
 
-  const handleMouseMove = (e) => {
+  const handleMouseMove = useCallback((e) => {
     if (!isDragging) return;
     
     const newX = e.clientX - dragOffset.x;
@@ -269,9 +269,9 @@ function NiueForecast() {
     
     setSidebarPosition({
       x: Math.max(0, Math.min(newX, maxX)),
-      y: Math.max(60, Math.min(newY, maxY)) // Keep below header
+      y: Math.max(0, Math.min(newY, maxY))
     });
-  };
+  }, [isDragging, dragOffset.x, dragOffset.y]);
 
   const handleMouseUp = () => {
     setIsDragging(false);
@@ -287,7 +287,7 @@ function NiueForecast() {
         document.removeEventListener('mouseup', handleMouseUp);
       };
     }
-  }, [isDragging, dragOffset]);
+  }, [isDragging, dragOffset, handleMouseMove]);
 
   useEffect(() => {
     async function fetchCapabilities() {
